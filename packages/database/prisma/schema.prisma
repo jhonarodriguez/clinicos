@@ -1,0 +1,1467 @@
+// =============================================================================
+// ClinicOS — Prisma Schema completo
+// 51 tablas / 7 bounded contexts / PostgreSQL 16 con RLS
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// 1. IDENTITY CONTEXT
+// =============================================================================
+
+model Tenant {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name               String    @db.VarChar(200)
+  tradeName          String?   @map("trade_name") @db.VarChar(200)
+  nit                String    @unique @db.VarChar(20)
+  verificationDigit  String?   @map("verification_digit") @db.Char(1)
+  ipsCode            String?   @map("ips_code") @db.VarChar(20)
+  complexityLevel    String?   @map("complexity_level") @db.VarChar(20)
+  ipsType            String?   @map("ips_type") @db.VarChar(50)
+  legalRepName       String?   @map("legal_rep_name") @db.VarChar(200)
+  legalRepDocument   String?   @map("legal_rep_document") @db.VarChar(20)
+  phone              String?   @db.VarChar(20)
+  email              String?   @db.VarChar(200)
+  logoUrl            String?   @map("logo_url") @db.VarChar(500)
+  branding           Json      @default("{}")
+  settings           Json      @default("{}")
+  timezone           String    @default("America/Bogota") @db.VarChar(50)
+  subscriptionPlan   String    @default("starter") @map("subscription_plan") @db.VarChar(50)
+  subscriptionStatus String    @default("trial") @map("subscription_status") @db.VarChar(20)
+  trialEndsAt        DateTime? @map("trial_ends_at") @db.Timestamptz(6)
+  isActive           Boolean   @default(true) @map("is_active")
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  sites            TenantSite[]
+  features         TenantFeature[]
+  users            User[]
+  roles            Role[]
+  professionals    Professional[]
+  rooms            Room[]
+  equipment        Equipment[]
+  serviceTypes     ServiceType[]
+  scheduleBlocks   ScheduleBlock[]
+  appointments     Appointment[]
+  procedures       Procedure[]
+  waitlistEntries  WaitlistEntry[]
+  patients         Patient[]
+  medicalRecords   MedicalRecord[]
+  procedureReports ProcedureReport[]
+  diagnoses        Diagnosis[]
+  medicalOrders    MedicalOrder[]
+  prescriptions    Prescription[]
+  procedureImages  ProcedureImage[]
+  biopsySamples    BiopsySample[]
+  payers           Payer[]
+  contracts        Contract[]
+  invoices         Invoice[]
+  claims           Claim[]
+  payments         Payment[]
+  copaymentRules   CopaymentRule[]
+  copayAccumulators PatientCopayAccumulator[]
+  treatmentPrograms TreatmentProgram[]
+  preparationProtocols PreparationProtocol[]
+  notifications    Notification[]
+  adverseEvents    AdverseEvent[]
+  sessions         Session[]
+  specialties      Specialty[]
+  patientConsents       PatientConsent[]
+  professionalSchedules ProfessionalSchedule[]
+
+  @@map("tenants")
+}
+
+model TenantSite {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  name             String   @db.VarChar(200)
+  address          String   @db.VarChar(300)
+  city             String   @db.VarChar(100)
+  department       String?  @db.VarChar(100)
+  municipalityCode String?  @map("municipality_code") @db.VarChar(10)
+  phone            String?  @db.VarChar(20)
+  email            String?  @db.VarChar(200)
+  schedule         Json     @default("{}")
+  isMain           Boolean  @default(false) @map("is_main")
+  isActive         Boolean  @default(true) @map("is_active")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant               Tenant                @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  rooms                Room[]
+  equipment            Equipment[]
+  professionalSchedules ProfessionalSchedule[]
+  appointments         Appointment[]
+  procedures           Procedure[]
+  medicalRecords       MedicalRecord[]
+  procedureReports     ProcedureReport[]
+  userRoles            UserRole[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId], name: "idx_tenant_sites_tenant")
+  @@map("tenant_sites")
+}
+
+model TenantFeature {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId   String    @map("tenant_id") @db.Uuid
+  featureKey String    @map("feature_key") @db.VarChar(100)
+  isEnabled  Boolean   @default(false) @map("is_enabled")
+  config     Json      @default("{}")
+  enabledAt  DateTime? @map("enabled_at") @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, featureKey])
+  @@index([tenantId], name: "idx_tenant_features_tenant")
+  @@map("tenant_features")
+}
+
+model User {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String    @map("tenant_id") @db.Uuid
+  email             String    @db.VarChar(200)
+  passwordHash      String    @map("password_hash") @db.VarChar(200)
+  firstName         String    @map("first_name") @db.VarChar(100)
+  lastName          String    @map("last_name") @db.VarChar(100)
+  phone             String?   @db.VarChar(20)
+  avatarUrl         String?   @map("avatar_url") @db.VarChar(500)
+  isActive          Boolean   @default(true) @map("is_active")
+  isSuperAdmin      Boolean   @default(false) @map("is_super_admin")
+  hasMfa            Boolean   @default(false) @map("has_mfa")
+  mfaSecret         String?   @map("mfa_secret") @db.VarChar(200)
+  passwordChangedAt DateTime? @map("password_changed_at") @db.Timestamptz(6)
+  failedLoginCount  Int       @default(0) @map("failed_login_count")
+  lockedUntil       DateTime? @map("locked_until") @db.Timestamptz(6)
+  lastLoginAt       DateTime? @map("last_login_at") @db.Timestamptz(6)
+  lastLoginIp       String?   @map("last_login_ip") @db.VarChar(45)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt         DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  tenant             Tenant               @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  sessions           Session[]
+  roles              UserRole[]
+  professional       Professional?
+  scheduleBlocksCreated ScheduleBlock[]  @relation("ScheduleBlockCreatedBy")
+  appointmentsCreated   Appointment[]    @relation("AppointmentCreatedBy")
+  proceduresCreated     Procedure[]      @relation("ProcedureCreatedBy")
+  medicalRecordSections MedicalRecordSection[]
+  treatmentProgramsCreated TreatmentProgram[] @relation("TreatmentProgramCreatedBy")
+  invoicesIssued     Invoice[]           @relation("InvoiceIssuedBy")
+  claimsResponded    Claim[]             @relation("ClaimRespondedBy")
+  paymentsReceived   Payment[]           @relation("PaymentReceivedBy")
+  procedureImagesUploaded ProcedureImage[] @relation("ProcedureImageUploadedBy")
+  biopsySamplesSent  BiopsySample[]      @relation("BiopsySampleSentBy")
+  adverseEventsReported AdverseEvent[]   @relation("AdverseEventReportedBy")
+  userRolesAssigned  UserRole[]          @relation("UserRoleAssignedBy")
+
+  @@unique([tenantId, email])
+  @@index([tenantId], name: "idx_users_tenant")
+  @@index([tenantId, email], name: "idx_users_tenant_email")
+  @@map("users")
+}
+
+model Role {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  name        String   @db.VarChar(100)
+  description String?
+  isSystem    Boolean  @default(false) @map("is_system")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  permissions RolePermission[]
+  users       UserRole[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId], name: "idx_roles_tenant")
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  module      String   @db.VarChar(50)
+  resource    String   @db.VarChar(50)
+  action      String   @db.VarChar(50)
+  description String?
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  roles RolePermission[]
+
+  @@unique([module, resource, action])
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  roleId       String @map("role_id") @db.Uuid
+  permissionId String @map("permission_id") @db.Uuid
+  scope        String @default("all") @db.VarChar(50)
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([roleId], name: "idx_role_permissions_role")
+  @@map("role_permissions")
+}
+
+model UserRole {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  roleId     String    @map("role_id") @db.Uuid
+  siteId     String?   @map("site_id") @db.Uuid
+  assignedAt DateTime  @default(now()) @map("assigned_at") @db.Timestamptz(6)
+  assignedBy String?   @map("assigned_by") @db.Uuid
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  site       TenantSite? @relation(fields: [siteId], references: [id])
+  assignedByUser User?  @relation("UserRoleAssignedBy", fields: [assignedBy], references: [id])
+
+  @@unique([userId, roleId, siteId])
+  @@index([userId], name: "idx_user_roles_user")
+  @@map("user_roles")
+}
+
+model Session {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  refreshToken String    @unique @map("refresh_token")
+  ipAddress    String    @map("ip_address") @db.VarChar(45)
+  userAgent    String?   @map("user_agent")
+  expiresAt    DateTime  @map("expires_at") @db.Timestamptz(6)
+  revokedAt    DateTime? @map("revoked_at") @db.Timestamptz(6)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([userId], name: "idx_sessions_user")
+  @@index([refreshToken], name: "idx_sessions_token")
+  @@index([expiresAt], name: "idx_sessions_expires")
+  @@map("sessions")
+}
+
+// =============================================================================
+// 2. SCHEDULING CONTEXT
+// =============================================================================
+
+model Specialty {
+  id       String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId String? @map("tenant_id") @db.Uuid
+  name     String  @db.VarChar(200)
+  code     String? @db.VarChar(20)
+  parentId String? @map("parent_id") @db.Uuid
+  isActive Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant        Tenant?               @relation(fields: [tenantId], references: [id])
+  parent        Specialty?            @relation("SpecialtyParent", fields: [parentId], references: [id])
+  children      Specialty[]           @relation("SpecialtyParent")
+  professionals ProfessionalSpecialty[]
+  appointments  Appointment[]
+
+  @@index([tenantId], name: "idx_specialties_tenant")
+  @@index([parentId], name: "idx_specialties_parent")
+  @@map("specialties")
+}
+
+model Professional {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId             String   @map("tenant_id") @db.Uuid
+  userId               String   @unique @map("user_id") @db.Uuid
+  professionalCard     String?  @map("professional_card") @db.VarChar(50)
+  registrationNumber   String?  @map("registration_number") @db.VarChar(50)
+  documentType         String   @map("document_type") @db.VarChar(10)
+  documentNumber       String   @map("document_number") @db.VarChar(20)
+  digitalSignatureUrl  String?  @map("digital_signature_url") @db.VarChar(500)
+  stampUrl             String?  @map("stamp_url") @db.VarChar(500)
+  qrVerificationData   Json?    @map("qr_verification_data")
+  isActive             Boolean  @default(true) @map("is_active")
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant                    Tenant                  @relation(fields: [tenantId], references: [id])
+  user                      User                    @relation(fields: [userId], references: [id])
+  specialties               ProfessionalSpecialty[]
+  schedules                 ProfessionalSchedule[]
+  appointmentsAsPrimary     Appointment[]           @relation("AppointmentProfessional")
+  proceduresAsPrimary       Procedure[]             @relation("ProcedurePrimary")
+  proceduresAsAnesthesiologist Procedure[]          @relation("ProcedureAnesthesiologist")
+  medicalRecords            MedicalRecord[]
+  procedureReportsAsPrimary ProcedureReport[]       @relation("ReportPrimary")
+  procedureReportsAsAnesthesiologist ProcedureReport[] @relation("ReportAnesthesiologist")
+  diagnoses                 Diagnosis[]             @relation("DiagnosisProfessional")
+  medicalOrders             MedicalOrder[]
+  prescriptions             Prescription[]
+  biopsySamples             BiopsySample[]          @relation("BiopsySampleProfessional")
+  biopsySamplesReviewed     BiopsySample[]          @relation("BiopsySampleReviewedBy")
+  invoiceItems              InvoiceItem[]
+  treatmentPrograms         TreatmentProgram[]
+  patientConsents           PatientConsent[]
+  scheduleBlocks            ScheduleBlock[]
+  waitlistEntries           WaitlistEntry[]
+
+  @@unique([tenantId, userId])
+  @@unique([tenantId, documentNumber])
+  @@index([tenantId], name: "idx_professionals_tenant")
+  @@index([userId], name: "idx_professionals_user")
+  @@map("professionals")
+}
+
+model ProfessionalSpecialty {
+  id             String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  professionalId String  @map("professional_id") @db.Uuid
+  specialtyId    String  @map("specialty_id") @db.Uuid
+  isPrimary      Boolean @default(false) @map("is_primary")
+
+  professional Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  specialty    Specialty    @relation(fields: [specialtyId], references: [id])
+
+  @@unique([professionalId, specialtyId])
+  @@index([professionalId], name: "idx_prof_spec_professional")
+  @@map("professional_specialties")
+}
+
+model Room {
+  id       String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId String  @map("tenant_id") @db.Uuid
+  siteId   String  @map("site_id") @db.Uuid
+  name     String  @db.VarChar(100)
+  code     String? @db.VarChar(20)
+  roomType String  @map("room_type") @db.VarChar(50)
+  capacity Int?    @default(1)
+  floor    String? @db.VarChar(20)
+  isActive Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant        Tenant          @relation(fields: [tenantId], references: [id])
+  site          TenantSite      @relation(fields: [siteId], references: [id])
+  equipment     Equipment[]
+  scheduleBlocks ScheduleBlock[]
+  appointments  Appointment[]
+  procedures    Procedure[]
+
+  @@unique([tenantId, siteId, code])
+  @@index([tenantId, siteId], name: "idx_rooms_tenant_site")
+  @@map("rooms")
+}
+
+model Equipment {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String    @map("tenant_id") @db.Uuid
+  siteId            String    @map("site_id") @db.Uuid
+  name              String    @db.VarChar(200)
+  code              String?   @db.VarChar(50)
+  equipmentType     String    @map("equipment_type") @db.VarChar(100)
+  brand             String?   @db.VarChar(100)
+  model             String?   @db.VarChar(100)
+  serialNumber      String?   @map("serial_number") @db.VarChar(100)
+  roomId            String?   @map("room_id") @db.Uuid
+  maintenanceStatus String    @default("operational") @map("maintenance_status") @db.VarChar(20)
+  lastMaintenanceAt DateTime? @map("last_maintenance_at") @db.Timestamptz(6)
+  nextMaintenanceAt DateTime? @map("next_maintenance_at") @db.Timestamptz(6)
+  isActive          Boolean   @default(true) @map("is_active")
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant         Tenant          @relation(fields: [tenantId], references: [id])
+  site           TenantSite      @relation(fields: [siteId], references: [id])
+  room           Room?           @relation(fields: [roomId], references: [id])
+  scheduleBlocks ScheduleBlock[]
+  procedures     Procedure[]
+
+  @@index([tenantId], name: "idx_equipment_tenant")
+  @@index([roomId], name: "idx_equipment_room")
+  @@map("equipment")
+}
+
+model ServiceType {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId              String   @map("tenant_id") @db.Uuid
+  name                  String   @db.VarChar(200)
+  code                  String?  @db.VarChar(50)
+  cupsCode              String?  @map("cups_code") @db.VarChar(20)
+  category              String   @db.VarChar(50)
+  defaultDurationMin    Int      @map("default_duration_min")
+  recoveryDurationMin   Int      @default(0) @map("recovery_duration_min")
+  cleanupDurationMin    Int      @default(0) @map("cleanup_duration_min")
+  requiresSedation      Boolean  @default(false) @map("requires_sedation")
+  requiresCompanion     Boolean  @default(false) @map("requires_companion")
+  requiresAuthorization Boolean  @default(false) @map("requires_authorization")
+  requiresConsent       Boolean  @default(false) @map("requires_consent")
+  consentTemplateId     String?  @map("consent_template_id") @db.Uuid
+  preparationProtocolId String?  @map("preparation_protocol_id") @db.Uuid
+  canSelfSchedule       Boolean  @default(false) @map("can_self_schedule")
+  isActive              Boolean  @default(true) @map("is_active")
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant               Tenant                     @relation(fields: [tenantId], references: [id])
+  resourceRequirements ServiceResourceRequirement[]
+  appointments         Appointment[]
+  procedures           Procedure[]
+  waitlistEntries      WaitlistEntry[]
+  preparationProtocols PreparationProtocol[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId], name: "idx_service_types_tenant")
+  @@map("service_types")
+}
+
+model ServiceResourceRequirement {
+  id            String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  serviceTypeId String  @map("service_type_id") @db.Uuid
+  resourceType  String  @map("resource_type") @db.VarChar(50)
+  resourceValue String  @map("resource_value") @db.VarChar(100)
+  quantity      Int     @default(1)
+  isRequired    Boolean @default(true) @map("is_required")
+
+  serviceType ServiceType @relation(fields: [serviceTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([serviceTypeId, resourceType, resourceValue])
+  @@map("service_resource_requirements")
+}
+
+model ProfessionalSchedule {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId            String    @map("tenant_id") @db.Uuid
+  professionalId      String    @map("professional_id") @db.Uuid
+  siteId              String    @map("site_id") @db.Uuid
+  dayOfWeek           Int       @map("day_of_week")
+  startTime           DateTime  @map("start_time") @db.Time()
+  endTime             DateTime  @map("end_time") @db.Time()
+  slotDurationMin     Int       @default(20) @map("slot_duration_min")
+  maxOverbooking      Int       @default(0) @map("max_overbooking")
+  allowedServiceTypes String[]  @map("allowed_service_types") @db.Uuid
+  validFrom           DateTime  @map("valid_from") @db.Date
+  validUntil          DateTime? @map("valid_until") @db.Date
+  isActive            Boolean   @default(true) @map("is_active")
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant       Tenant      @relation(fields: [tenantId], references: [id])
+  professional Professional @relation(fields: [professionalId], references: [id])
+  site         TenantSite  @relation(fields: [siteId], references: [id])
+
+  @@index([tenantId, professionalId], name: "idx_prof_schedules_tenant_prof")
+  @@index([tenantId, professionalId, dayOfWeek], name: "idx_prof_schedules_day")
+  @@map("professional_schedules")
+}
+
+model ScheduleBlock {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+  blockType      String    @map("block_type") @db.VarChar(50)
+  professionalId String?   @map("professional_id") @db.Uuid
+  roomId         String?   @map("room_id") @db.Uuid
+  equipmentId    String?   @map("equipment_id") @db.Uuid
+  startDatetime  DateTime  @map("start_datetime") @db.Timestamptz(6)
+  endDatetime    DateTime  @map("end_datetime") @db.Timestamptz(6)
+  allDay         Boolean   @default(false) @map("all_day")
+  reason         String?
+  createdBy      String    @map("created_by") @db.Uuid
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  professional Professional? @relation(fields: [professionalId], references: [id])
+  room         Room?         @relation(fields: [roomId], references: [id])
+  equipment    Equipment?    @relation(fields: [equipmentId], references: [id])
+  createdByUser User         @relation("ScheduleBlockCreatedBy", fields: [createdBy], references: [id])
+
+  @@index([tenantId], name: "idx_schedule_blocks_tenant")
+  @@index([tenantId, professionalId, startDatetime, endDatetime], name: "idx_schedule_blocks_prof")
+  @@index([tenantId, roomId, startDatetime, endDatetime], name: "idx_schedule_blocks_room")
+  @@map("schedule_blocks")
+}
+
+model Appointment {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId            String    @map("tenant_id") @db.Uuid
+  patientId           String    @map("patient_id") @db.Uuid
+  professionalId      String    @map("professional_id") @db.Uuid
+  siteId              String    @map("site_id") @db.Uuid
+  roomId              String?   @map("room_id") @db.Uuid
+  serviceTypeId       String    @map("service_type_id") @db.Uuid
+  specialtyId         String?   @map("specialty_id") @db.Uuid
+  scheduledStart      DateTime  @map("scheduled_start") @db.Timestamptz(6)
+  scheduledEnd        DateTime  @map("scheduled_end") @db.Timestamptz(6)
+  actualStart         DateTime? @map("actual_start") @db.Timestamptz(6)
+  actualEnd           DateTime? @map("actual_end") @db.Timestamptz(6)
+  status              String    @default("scheduled") @db.VarChar(30)
+  isFirstVisit        Boolean   @default(false) @map("is_first_visit")
+  isOverbooking       Boolean   @default(false) @map("is_overbooking")
+  authorizationNumber String?   @map("authorization_number") @db.VarChar(50)
+  cancellationReason  String?   @map("cancellation_reason")
+  cancelledBy         String?   @map("cancelled_by") @db.VarChar(20)
+  cancelledAt         DateTime? @map("cancelled_at") @db.Timestamptz(6)
+  arrivalAt           DateTime? @map("arrival_at") @db.Timestamptz(6)
+  source              String    @default("reception") @db.VarChar(30)
+  notes               String?
+  createdBy           String    @map("created_by") @db.Uuid
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id])
+  patient       Patient       @relation(fields: [patientId], references: [id])
+  professional  Professional  @relation("AppointmentProfessional", fields: [professionalId], references: [id])
+  site          TenantSite    @relation(fields: [siteId], references: [id])
+  room          Room?         @relation(fields: [roomId], references: [id])
+  serviceType   ServiceType   @relation(fields: [serviceTypeId], references: [id])
+  specialty     Specialty?    @relation(fields: [specialtyId], references: [id])
+  createdByUser User           @relation("AppointmentCreatedBy", fields: [createdBy], references: [id])
+  medicalRecord MedicalRecord? @relation("AppointmentMedicalRecord")
+  programPhases ProgramPhase[]
+  invoices      Invoice[]
+
+  @@index([tenantId, scheduledStart], name: "idx_appointments_tenant_date")
+  @@index([tenantId, professionalId, scheduledStart], name: "idx_appointments_tenant_prof")
+  @@index([tenantId, patientId], name: "idx_appointments_tenant_patient")
+  @@index([tenantId, status, scheduledStart], name: "idx_appointments_status")
+  @@map("appointments")
+}
+
+model Procedure {
+  id                        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId                  String    @map("tenant_id") @db.Uuid
+  patientId                 String    @map("patient_id") @db.Uuid
+  serviceTypeId             String    @map("service_type_id") @db.Uuid
+  siteId                    String    @map("site_id") @db.Uuid
+  primaryProfessionalId     String    @map("primary_professional_id") @db.Uuid
+  anesthesiologistId        String?   @map("anesthesiologist_id") @db.Uuid
+  roomId                    String    @map("room_id") @db.Uuid
+  equipmentId               String?   @map("equipment_id") @db.Uuid
+  scheduledStart            DateTime  @map("scheduled_start") @db.Timestamptz(6)
+  scheduledEnd              DateTime  @map("scheduled_end") @db.Timestamptz(6)
+  recoveryUntil             DateTime? @map("recovery_until") @db.Timestamptz(6)
+  actualStart               DateTime? @map("actual_start") @db.Timestamptz(6)
+  actualEnd                 DateTime? @map("actual_end") @db.Timestamptz(6)
+  recoveryStart             DateTime? @map("recovery_start") @db.Timestamptz(6)
+  recoveryEnd               DateTime? @map("recovery_end") @db.Timestamptz(6)
+  status                    String    @default("scheduled") @db.VarChar(30)
+  originatingOrderId        String?   @map("originating_order_id") @db.Uuid
+  authorizationNumber       String?   @map("authorization_number") @db.VarChar(50)
+  companionName             String?   @map("companion_name") @db.VarChar(200)
+  companionDocument         String?   @map("companion_document") @db.VarChar(20)
+  companionPhone            String?   @map("companion_phone") @db.VarChar(20)
+  companionRelationship     String?   @map("companion_relationship") @db.VarChar(50)
+  prepInstructionsSent      Boolean   @default(false) @map("prep_instructions_sent")
+  prepInstructionsSentAt    DateTime? @map("prep_instructions_sent_at") @db.Timestamptz(6)
+  prepConfirmedByPatient    Boolean?  @default(false) @map("prep_confirmed_by_patient")
+  prepAdequate              Boolean?  @map("prep_adequate")
+  cancellationReason        String?   @map("cancellation_reason")
+  cancelledBy               String?   @map("cancelled_by") @db.VarChar(20)
+  cancelledAt               DateTime? @map("cancelled_at") @db.Timestamptz(6)
+  isLateCancellation        Boolean?  @default(false) @map("is_late_cancellation")
+  procedureReportId         String?   @map("procedure_report_id") @db.Uuid
+  source                    String    @default("reception") @db.VarChar(30)
+  notes                     String?
+  createdBy                 String    @map("created_by") @db.Uuid
+  createdAt                 DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                 DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant              Tenant           @relation(fields: [tenantId], references: [id])
+  patient             Patient          @relation(fields: [patientId], references: [id])
+  serviceType         ServiceType      @relation(fields: [serviceTypeId], references: [id])
+  site                TenantSite       @relation(fields: [siteId], references: [id])
+  primaryProfessional Professional     @relation("ProcedurePrimary", fields: [primaryProfessionalId], references: [id])
+  anesthesiologist    Professional?    @relation("ProcedureAnesthesiologist", fields: [anesthesiologistId], references: [id])
+  room                Room             @relation(fields: [roomId], references: [id])
+  equipment           Equipment?       @relation(fields: [equipmentId], references: [id])
+  createdByUser       User             @relation("ProcedureCreatedBy", fields: [createdBy], references: [id])
+  procedureReport     ProcedureReport? @relation("ProcedureToReport")
+  programPhases       ProgramPhase[]
+  invoices            Invoice[]
+  adverseEvents       AdverseEvent[]
+
+  @@index([tenantId, scheduledStart], name: "idx_procedures_tenant_date")
+  @@index([tenantId, primaryProfessionalId, scheduledStart], name: "idx_procedures_tenant_prof")
+  @@index([tenantId, anesthesiologistId, scheduledStart], name: "idx_procedures_tenant_anest")
+  @@index([tenantId, roomId, scheduledStart], name: "idx_procedures_tenant_room")
+  @@index([tenantId, patientId], name: "idx_procedures_tenant_patient")
+  @@index([tenantId, status, scheduledStart], name: "idx_procedures_status")
+  @@map("procedures")
+}
+
+model WaitlistEntry {
+  id                      String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId                String    @map("tenant_id") @db.Uuid
+  patientId               String    @map("patient_id") @db.Uuid
+  serviceTypeId           String    @map("service_type_id") @db.Uuid
+  preferredProfessionalId String?   @map("preferred_professional_id") @db.Uuid
+  preferredSiteId         String?   @map("preferred_site_id") @db.Uuid
+  dateRangeStart          DateTime? @map("date_range_start") @db.Date
+  dateRangeEnd            DateTime? @map("date_range_end") @db.Date
+  preferredTime           String?   @map("preferred_time") @db.VarChar(20)
+  priority                String    @default("normal") @db.VarChar(20)
+  status                  String    @default("waiting") @db.VarChar(20)
+  notifiedAt              DateTime? @map("notified_at") @db.Timestamptz(6)
+  notificationExpiresAt   DateTime? @map("notification_expires_at") @db.Timestamptz(6)
+  createdAt               DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant              Tenant        @relation(fields: [tenantId], references: [id])
+  patient             Patient       @relation(fields: [patientId], references: [id])
+  serviceType         ServiceType   @relation(fields: [serviceTypeId], references: [id])
+  preferredProfessional Professional? @relation(fields: [preferredProfessionalId], references: [id])
+
+  @@index([tenantId, serviceTypeId, status], name: "idx_waitlist_tenant_service")
+  @@map("waitlist_entries")
+}
+
+// =============================================================================
+// 3. CLINICAL CONTEXT
+// =============================================================================
+
+model Patient {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId             String    @map("tenant_id") @db.Uuid
+  documentType         String    @map("document_type") @db.VarChar(10)
+  documentNumber       String    @map("document_number") @db.VarChar(20)
+  firstName            String    @map("first_name") @db.VarChar(100)
+  secondName           String?   @map("second_name") @db.VarChar(100)
+  firstLastName        String    @map("first_last_name") @db.VarChar(100)
+  secondLastName       String?   @map("second_last_name") @db.VarChar(100)
+  birthDate            DateTime  @map("birth_date") @db.Date
+  biologicalSex        String    @map("biological_sex") @db.Char(1)
+  genderIdentity       String?   @map("gender_identity") @db.VarChar(50)
+  bloodType            String?   @map("blood_type") @db.VarChar(5)
+  phone                String?   @db.VarChar(20)
+  phoneSecondary       String?   @map("phone_secondary") @db.VarChar(20)
+  email                String?   @db.VarChar(200)
+  address              String?   @db.VarChar(300)
+  municipalityCode     String?   @map("municipality_code") @db.VarChar(10)
+  zone                 String?   @db.VarChar(10)
+  maritalStatus        String?   @map("marital_status") @db.VarChar(20)
+  educationLevel       String?   @map("education_level") @db.VarChar(50)
+  occupation           String?   @db.VarChar(100)
+  ethnicity            String    @default("none") @db.VarChar(50)
+  disability           String    @default("none") @db.VarChar(50)
+  payerType            String?   @map("payer_type") @db.VarChar(30)
+  payerId              String?   @map("payer_id") @db.Uuid
+  payerName            String?   @map("payer_name") @db.VarChar(200)
+  affiliateType        String?   @map("affiliate_type") @db.VarChar(20)
+  emergencyContact     Json?     @map("emergency_contact")
+  defaultCompanion     Json?     @map("default_companion")
+  noShowCount          Int       @default(0) @map("no_show_count")
+  selfScheduleBlocked  Boolean   @default(false) @map("self_schedule_blocked")
+  mergedIntoId         String?   @map("merged_into_id") @db.Uuid
+  mergedAt             DateTime? @map("merged_at") @db.Timestamptz(6)
+  dataConsentSigned    Boolean   @default(false) @map("data_consent_signed")
+  dataConsentSignedAt  DateTime? @map("data_consent_signed_at") @db.Timestamptz(6)
+  isActive             Boolean   @default(true) @map("is_active")
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant           Tenant            @relation(fields: [tenantId], references: [id])
+  mergedInto       Patient?          @relation("PatientMerge", fields: [mergedIntoId], references: [id])
+  mergedFrom       Patient[]         @relation("PatientMerge")
+  consents         PatientConsent[]
+  appointments     Appointment[]
+  procedures       Procedure[]
+  waitlistEntries  WaitlistEntry[]
+  medicalRecords   MedicalRecord[]
+  procedureReports ProcedureReport[]
+  diagnoses        Diagnosis[]       @relation("DiagnosisPatient")
+  medicalOrders    MedicalOrder[]
+  prescriptions    Prescription[]
+  procedureImages  ProcedureImage[]
+  biopsySamples    BiopsySample[]
+  invoices         Invoice[]
+  payments         Payment[]
+  copayAccumulators PatientCopayAccumulator[]
+  treatmentPrograms TreatmentProgram[]
+  notifications    Notification[]
+  adverseEvents    AdverseEvent[]
+
+  @@unique([tenantId, documentType, documentNumber])
+  @@index([tenantId], name: "idx_patients_tenant")
+  @@index([tenantId, documentNumber], name: "idx_patients_tenant_doc")
+  @@index([tenantId, firstLastName, firstName], name: "idx_patients_tenant_name")
+  @@index([tenantId, phone], name: "idx_patients_tenant_phone")
+  @@map("patients")
+}
+
+model PatientConsent {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId              String    @map("tenant_id") @db.Uuid
+  patientId             String    @map("patient_id") @db.Uuid
+  consentType           String    @map("consent_type") @db.VarChar(50)
+  templateVersion       String?   @map("template_version") @db.VarChar(20)
+  contentSnapshot       String?   @map("content_snapshot")
+  signedAt              DateTime  @map("signed_at") @db.Timestamptz(6)
+  signedByName          String    @map("signed_by_name") @db.VarChar(200)
+  signedByDocument      String?   @map("signed_by_document") @db.VarChar(20)
+  signedByRelationship  String?   @map("signed_by_relationship") @db.VarChar(50)
+  signatureImageUrl     String?   @map("signature_image_url") @db.VarChar(500)
+  signatureIp           String?   @map("signature_ip") @db.VarChar(45)
+  signatureMethod       String?   @map("signature_method") @db.VarChar(20)
+  professionalId        String?   @map("professional_id") @db.Uuid
+  pdfUrl                String?   @map("pdf_url") @db.VarChar(500)
+  relatedEntityType     String?   @map("related_entity_type") @db.VarChar(50)
+  relatedEntityId       String?   @map("related_entity_id") @db.Uuid
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  patient      Patient       @relation(fields: [patientId], references: [id])
+  professional Professional? @relation(fields: [professionalId], references: [id])
+
+  @@index([tenantId, patientId], name: "idx_consents_tenant_patient")
+  @@index([tenantId, patientId, consentType], name: "idx_consents_type")
+  @@map("patient_consents")
+}
+
+model MedicalRecord {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+  patientId      String    @map("patient_id") @db.Uuid
+  professionalId String    @map("professional_id") @db.Uuid
+  appointmentId  String?   @unique @map("appointment_id") @db.Uuid
+  siteId         String    @map("site_id") @db.Uuid
+  recordType     String    @map("record_type") @db.VarChar(50)
+  templateId     String?   @map("template_id") @db.Uuid
+  status         String    @default("in_progress") @db.VarChar(20)
+  signedAt       DateTime? @map("signed_at") @db.Timestamptz(6)
+  signatureHash  String?   @map("signature_hash") @db.VarChar(100)
+  signDeadline   DateTime? @map("sign_deadline") @db.Timestamptz(6)
+  addendumOf     String?   @map("addendum_of") @db.Uuid
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant              Tenant                 @relation(fields: [tenantId], references: [id])
+  patient             Patient                @relation(fields: [patientId], references: [id])
+  professional        Professional           @relation(fields: [professionalId], references: [id])
+  site                TenantSite             @relation(fields: [siteId], references: [id])
+  appointment         Appointment?           @relation("AppointmentMedicalRecord", fields: [appointmentId], references: [id])
+  parentRecord        MedicalRecord?         @relation("MedicalRecordAddendum", fields: [addendumOf], references: [id])
+  addenda             MedicalRecord[]        @relation("MedicalRecordAddendum")
+  sections            MedicalRecordSection[]
+  diagnoses           Diagnosis[]
+  medicalOrders       MedicalOrder[]
+  prescriptions       Prescription[]
+
+  @@index([tenantId, patientId, createdAt(sort: Desc)], name: "idx_med_records_tenant_patient")
+  @@index([tenantId, professionalId, createdAt(sort: Desc)], name: "idx_med_records_tenant_prof")
+  @@index([appointmentId], name: "idx_med_records_appointment")
+  @@map("medical_records")
+}
+
+model MedicalRecordSection {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  medicalRecordId String   @map("medical_record_id") @db.Uuid
+  sectionType     String   @map("section_type") @db.VarChar(50)
+  content         Json
+  version         Int      @default(1)
+  createdBy       String   @map("created_by") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  medicalRecord   MedicalRecord @relation(fields: [medicalRecordId], references: [id])
+  createdByUser   User          @relation(fields: [createdBy], references: [id])
+
+  @@index([medicalRecordId], name: "idx_record_sections_record")
+  @@index([medicalRecordId, sectionType], name: "idx_record_sections_type")
+  @@map("medical_record_sections")
+}
+
+model ProcedureReport {
+  id                              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId                        String    @map("tenant_id") @db.Uuid
+  patientId                       String    @map("patient_id") @db.Uuid
+  procedureId                     String    @unique @map("procedure_id") @db.Uuid
+  siteId                          String    @map("site_id") @db.Uuid
+  reportNumber                    String?   @map("report_number") @db.VarChar(50)
+  procedureType                   String    @map("procedure_type") @db.VarChar(100)
+  primaryProfessionalId           String    @map("primary_professional_id") @db.Uuid
+  anesthesiologistId              String?   @map("anesthesiologist_id") @db.Uuid
+  preDiagnosisCie                 String?   @map("pre_diagnosis_cie") @db.VarChar(20)
+  indication                      String
+  anestheticNote                  Json?     @map("anesthetic_note")
+  procedureDescription            Json      @map("procedure_description")
+  complications                   String?
+  recommendations                 String?
+  clinicalSummary                 String?   @map("clinical_summary")
+  status                          String    @default("in_progress") @db.VarChar(20)
+  primarySignedAt                 DateTime? @map("primary_signed_at") @db.Timestamptz(6)
+  primarySignatureHash            String?   @map("primary_signature_hash") @db.VarChar(100)
+  anesthesiologistSignedAt        DateTime? @map("anesthesiologist_signed_at") @db.Timestamptz(6)
+  anesthesiologistSignatureHash   String?   @map("anesthesiologist_signature_hash") @db.VarChar(100)
+  signDeadline                    DateTime? @map("sign_deadline") @db.Timestamptz(6)
+  pdfUrl                          String?   @map("pdf_url") @db.VarChar(500)
+  pdfGeneratedAt                  DateTime? @map("pdf_generated_at") @db.Timestamptz(6)
+  publishedToPortal               Boolean   @default(false) @map("published_to_portal")
+  publishedAt                     DateTime? @map("published_at") @db.Timestamptz(6)
+  createdAt                       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant              Tenant          @relation(fields: [tenantId], references: [id])
+  patient             Patient         @relation(fields: [patientId], references: [id])
+  procedure           Procedure       @relation("ProcedureToReport", fields: [procedureId], references: [id])
+  site                TenantSite      @relation(fields: [siteId], references: [id])
+  primaryProfessional Professional    @relation("ReportPrimary", fields: [primaryProfessionalId], references: [id])
+  anesthesiologist    Professional?   @relation("ReportAnesthesiologist", fields: [anesthesiologistId], references: [id])
+  diagnoses           Diagnosis[]
+  medicalOrders       MedicalOrder[]
+  prescriptions       Prescription[]
+  images              ProcedureImage[]
+  biopsySamples       BiopsySample[]
+
+  @@index([tenantId, patientId, createdAt(sort: Desc)], name: "idx_proc_reports_tenant_patient")
+  @@index([procedureId], name: "idx_proc_reports_procedure")
+  @@map("procedure_reports")
+}
+
+model Diagnosis {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String   @map("tenant_id") @db.Uuid
+  medicalRecordId   String?  @map("medical_record_id") @db.Uuid
+  procedureReportId String?  @map("procedure_report_id") @db.Uuid
+  patientId         String?  @map("patient_id") @db.Uuid
+  professionalId    String?  @map("professional_id") @db.Uuid
+  cieVersion        String   @default("CIE-10") @map("cie_version") @db.VarChar(10)
+  cieCode           String   @map("cie_code") @db.VarChar(20)
+  description       String   @db.VarChar(500)
+  diagnosisType     String   @map("diagnosis_type") @db.VarChar(20)
+  confirmationType  String?  @map("confirmation_type") @db.VarChar(20)
+  isFirstTime       Boolean  @default(false) @map("is_first_time")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant          Tenant           @relation(fields: [tenantId], references: [id])
+  medicalRecord   MedicalRecord?   @relation(fields: [medicalRecordId], references: [id])
+  procedureReport ProcedureReport? @relation(fields: [procedureReportId], references: [id])
+  patient         Patient?         @relation("DiagnosisPatient", fields: [patientId], references: [id])
+  professional    Professional?    @relation("DiagnosisProfessional", fields: [professionalId], references: [id])
+
+  @@index([medicalRecordId], name: "idx_diagnoses_record")
+  @@index([procedureReportId], name: "idx_diagnoses_report")
+  @@index([tenantId, cieCode], name: "idx_diagnoses_tenant_code")
+  @@map("diagnoses")
+}
+
+model MedicalOrder {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String    @map("tenant_id") @db.Uuid
+  medicalRecordId   String?   @map("medical_record_id") @db.Uuid
+  procedureReportId String?   @map("procedure_report_id") @db.Uuid
+  patientId         String    @map("patient_id") @db.Uuid
+  professionalId    String    @map("professional_id") @db.Uuid
+  orderType         String    @map("order_type") @db.VarChar(30)
+  cupsCode          String?   @map("cups_code") @db.VarChar(20)
+  description       String
+  details           Json      @default("{}")
+  diagnosisCie      String?   @map("diagnosis_cie") @db.VarChar(20)
+  isUrgent          Boolean   @default(false) @map("is_urgent")
+  status            String    @default("created") @db.VarChar(20)
+  notes             String?
+  pdfUrl            String?   @map("pdf_url") @db.VarChar(500)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant          Tenant           @relation(fields: [tenantId], references: [id])
+  medicalRecord   MedicalRecord?   @relation(fields: [medicalRecordId], references: [id])
+  procedureReport ProcedureReport? @relation(fields: [procedureReportId], references: [id])
+  patient         Patient          @relation(fields: [patientId], references: [id])
+  professional    Professional     @relation(fields: [professionalId], references: [id])
+
+  @@index([tenantId, patientId], name: "idx_orders_tenant_patient")
+  @@index([medicalRecordId], name: "idx_orders_record")
+  @@index([tenantId, orderType, status], name: "idx_orders_type_status")
+  @@map("medical_orders")
+}
+
+model Prescription {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId            String    @map("tenant_id") @db.Uuid
+  medicalRecordId     String?   @map("medical_record_id") @db.Uuid
+  procedureReportId   String?   @map("procedure_report_id") @db.Uuid
+  patientId           String    @map("patient_id") @db.Uuid
+  professionalId      String    @map("professional_id") @db.Uuid
+  prescriptionNumber  String?   @map("prescription_number") @db.VarChar(50)
+  status              String    @default("active") @db.VarChar(20)
+  pdfUrl              String?   @map("pdf_url") @db.VarChar(500)
+  notes               String?
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant          Tenant           @relation(fields: [tenantId], references: [id])
+  medicalRecord   MedicalRecord?   @relation(fields: [medicalRecordId], references: [id])
+  procedureReport ProcedureReport? @relation(fields: [procedureReportId], references: [id])
+  patient         Patient          @relation(fields: [patientId], references: [id])
+  professional    Professional     @relation(fields: [professionalId], references: [id])
+  items           PrescriptionItem[]
+
+  @@index([tenantId, patientId], name: "idx_prescriptions_tenant_patient")
+  @@map("prescriptions")
+}
+
+model PrescriptionItem {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  prescriptionId       String   @map("prescription_id") @db.Uuid
+  medicationName       String   @map("medication_name") @db.VarChar(300)
+  medicationCode       String?  @map("medication_code") @db.VarChar(50)
+  concentration        String?  @db.VarChar(100)
+  pharmaceuticalForm   String?  @map("pharmaceutical_form") @db.VarChar(100)
+  administrationRoute  String?  @map("administration_route") @db.VarChar(50)
+  dose                 String   @db.VarChar(100)
+  frequency            String   @db.VarChar(100)
+  durationDays         Int?     @map("duration_days")
+  totalQuantity        Int?     @map("total_quantity")
+  specialInstructions  String?  @map("special_instructions")
+  isControlled         Boolean  @default(false) @map("is_controlled")
+  requiresMipres       Boolean  @default(false) @map("requires_mipres")
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  prescription Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+
+  @@index([prescriptionId], name: "idx_prescription_items_prescription")
+  @@map("prescription_items")
+}
+
+model ProcedureImage {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId             String    @map("tenant_id") @db.Uuid
+  procedureReportId    String    @map("procedure_report_id") @db.Uuid
+  patientId            String    @map("patient_id") @db.Uuid
+  originalFilename     String?   @map("original_filename") @db.VarChar(300)
+  storageKey           String    @map("storage_key") @db.VarChar(500)
+  thumbnailKey         String?   @map("thumbnail_key") @db.VarChar(500)
+  mimeType             String?   @default("image/jpeg") @map("mime_type") @db.VarChar(50)
+  sizeBytes            BigInt?   @map("size_bytes")
+  anatomicalSegment    String?   @map("anatomical_segment") @db.VarChar(100)
+  annotation           String?
+  displayOrder         Int       @default(0) @map("display_order")
+  isSelectedForReport  Boolean   @default(true) @map("is_selected_for_report")
+  capturedAt           DateTime? @map("captured_at") @db.Timestamptz(6)
+  uploadedBy           String    @map("uploaded_by") @db.Uuid
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant          Tenant          @relation(fields: [tenantId], references: [id])
+  procedureReport ProcedureReport @relation(fields: [procedureReportId], references: [id])
+  patient         Patient         @relation(fields: [patientId], references: [id])
+  uploadedByUser  User            @relation("ProcedureImageUploadedBy", fields: [uploadedBy], references: [id])
+
+  @@index([procedureReportId], name: "idx_proc_images_report")
+  @@index([tenantId, patientId], name: "idx_proc_images_tenant_patient")
+  @@map("procedure_images")
+}
+
+model BiopsySample {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId              String    @map("tenant_id") @db.Uuid
+  procedureReportId     String    @map("procedure_report_id") @db.Uuid
+  patientId             String    @map("patient_id") @db.Uuid
+  professionalId        String    @map("professional_id") @db.Uuid
+  sampleNumber          Int       @map("sample_number")
+  siteDescription       String    @map("site_description") @db.VarChar(200)
+  sampleType            String    @map("sample_type") @db.VarChar(50)
+  numFragments          Int?      @default(1) @map("num_fragments")
+  numJars               Int?      @default(1) @map("num_jars")
+  fixative              String?   @default("formalin") @db.VarChar(50)
+  pathologyLabName      String?   @map("pathology_lab_name") @db.VarChar(200)
+  sentDate              DateTime? @map("sent_date") @db.Date
+  sentBy                String?   @map("sent_by") @db.Uuid
+  trackingNumber        String?   @map("tracking_number") @db.VarChar(100)
+  resultReceivedDate    DateTime? @map("result_received_date") @db.Date
+  resultSummary         String?   @map("result_summary")
+  resultDiagnosisCie    String?   @map("result_diagnosis_cie") @db.VarChar(20)
+  resultDocumentUrl     String?   @map("result_document_url") @db.VarChar(500)
+  resultReviewedBy      String?   @map("result_reviewed_by") @db.Uuid
+  resultReviewedAt      DateTime? @map("result_reviewed_at") @db.Timestamptz(6)
+  isPublishedToPortal   Boolean   @default(false) @map("is_published_to_portal")
+  status                String    @default("registered") @db.VarChar(30)
+  alertTriggered        Boolean   @default(false) @map("alert_triggered")
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant          Tenant          @relation(fields: [tenantId], references: [id])
+  procedureReport ProcedureReport @relation(fields: [procedureReportId], references: [id])
+  patient         Patient         @relation(fields: [patientId], references: [id])
+  professional    Professional    @relation("BiopsySampleProfessional", fields: [professionalId], references: [id])
+  sentByUser      User?           @relation("BiopsySampleSentBy", fields: [sentBy], references: [id])
+  reviewedBy      Professional?   @relation("BiopsySampleReviewedBy", fields: [resultReviewedBy], references: [id])
+
+  @@index([tenantId, patientId], name: "idx_biopsies_tenant_patient")
+  @@index([procedureReportId], name: "idx_biopsies_report")
+  @@index([tenantId, status], name: "idx_biopsies_status")
+  @@map("biopsy_samples")
+}
+
+// =============================================================================
+// 4. BILLING CONTEXT
+// =============================================================================
+
+model Payer {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  name           String   @db.VarChar(200)
+  nit            String?  @db.VarChar(20)
+  payerType      String   @map("payer_type") @db.VarChar(30)
+  code           String?  @db.VarChar(20)
+  contactEmail   String?  @map("contact_email") @db.VarChar(200)
+  contactPhone   String?  @map("contact_phone") @db.VarChar(20)
+  filingAddress  String?  @map("filing_address") @db.VarChar(300)
+  filingEmail    String?  @map("filing_email") @db.VarChar(200)
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id])
+  contracts Contract[]
+  invoices  Invoice[]
+  claims    Claim[]
+
+  @@unique([tenantId, nit])
+  @@index([tenantId], name: "idx_payers_tenant")
+  @@map("payers")
+}
+
+model Contract {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId             String    @map("tenant_id") @db.Uuid
+  payerId              String    @map("payer_id") @db.Uuid
+  contractNumber       String    @map("contract_number") @db.VarChar(50)
+  contractType         String    @map("contract_type") @db.VarChar(30)
+  tariffBase           String    @map("tariff_base") @db.VarChar(50)
+  tariffPercentage     Decimal?  @map("tariff_percentage") @db.Decimal(6, 2)
+  validFrom            DateTime  @map("valid_from") @db.Date
+  validUntil           DateTime  @map("valid_until") @db.Date
+  requiresAuthorization Boolean  @default(true) @map("requires_authorization")
+  maxPerEvent          Decimal?  @map("max_per_event") @db.Decimal(15, 2)
+  maxMonthly           Decimal?  @map("max_monthly") @db.Decimal(15, 2)
+  maxAnnual            Decimal?  @map("max_annual") @db.Decimal(15, 2)
+  filingDeadlineDays   Int?      @default(30) @map("filing_deadline_days")
+  paymentDeadlineDays  Int?      @default(60) @map("payment_deadline_days")
+  coveredServices      Json      @default("[]") @map("covered_services")
+  isActive             Boolean   @default(true) @map("is_active")
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id])
+  payer    Payer     @relation(fields: [payerId], references: [id])
+  invoices Invoice[]
+
+  @@unique([tenantId, contractNumber])
+  @@index([tenantId, payerId], name: "idx_contracts_tenant_payer")
+  @@index([tenantId, validFrom, validUntil], name: "idx_contracts_validity")
+  @@map("contracts")
+}
+
+model Invoice {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+  invoiceNumber  String    @map("invoice_number") @db.VarChar(50)
+  prefix         String?   @db.VarChar(10)
+  cufe           String?   @db.VarChar(200)
+  patientId      String    @map("patient_id") @db.Uuid
+  payerId        String?   @map("payer_id") @db.Uuid
+  contractId     String?   @map("contract_id") @db.Uuid
+  payerType      String    @map("payer_type") @db.VarChar(30)
+  appointmentId  String?   @map("appointment_id") @db.Uuid
+  procedureId    String?   @map("procedure_id") @db.Uuid
+  subtotal       Decimal   @default(0) @db.Decimal(15, 2)
+  copayAmount    Decimal   @default(0) @map("copay_amount") @db.Decimal(15, 2)
+  discountAmount Decimal   @default(0) @map("discount_amount") @db.Decimal(15, 2)
+  taxAmount      Decimal   @default(0) @map("tax_amount") @db.Decimal(15, 2)
+  totalAmount    Decimal   @default(0) @map("total_amount") @db.Decimal(15, 2)
+  payerAmount    Decimal   @default(0) @map("payer_amount") @db.Decimal(15, 2)
+  patientAmount  Decimal   @default(0) @map("patient_amount") @db.Decimal(15, 2)
+  status         String    @default("draft") @db.VarChar(20)
+  xmlUrl         String?   @map("xml_url") @db.VarChar(500)
+  pdfUrl         String?   @map("pdf_url") @db.VarChar(500)
+  ripsJsonUrl    String?   @map("rips_json_url") @db.VarChar(500)
+  filedAt        DateTime? @map("filed_at") @db.Timestamptz(6)
+  filedNumber    String?   @map("filed_number") @db.VarChar(50)
+  paidAt         DateTime? @map("paid_at") @db.Timestamptz(6)
+  paidAmount     Decimal?  @map("paid_amount") @db.Decimal(15, 2)
+  voidedAt       DateTime? @map("voided_at") @db.Timestamptz(6)
+  voidReason     String?   @map("void_reason")
+  creditNoteId   String?   @map("credit_note_id") @db.Uuid
+  issuedAt       DateTime? @map("issued_at") @db.Timestamptz(6)
+  issuedBy       String?   @map("issued_by") @db.Uuid
+  notes          String?
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant      Tenant        @relation(fields: [tenantId], references: [id])
+  patient     Patient       @relation(fields: [patientId], references: [id])
+  payer       Payer?        @relation(fields: [payerId], references: [id])
+  contract    Contract?     @relation(fields: [contractId], references: [id])
+  appointment Appointment?  @relation(fields: [appointmentId], references: [id])
+  procedure   Procedure?    @relation(fields: [procedureId], references: [id])
+  issuedByUser User?        @relation("InvoiceIssuedBy", fields: [issuedBy], references: [id])
+  items       InvoiceItem[]
+  claims      Claim[]
+  payments    Payment[]
+
+  @@unique([tenantId, invoiceNumber])
+  @@index([tenantId, createdAt(sort: Desc)], name: "idx_invoices_tenant")
+  @@index([tenantId, patientId], name: "idx_invoices_tenant_patient")
+  @@index([tenantId, payerId, status], name: "idx_invoices_tenant_payer")
+  @@index([tenantId, status, createdAt], name: "idx_invoices_status")
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invoiceId      String   @map("invoice_id") @db.Uuid
+  itemType       String   @map("item_type") @db.VarChar(30)
+  cupsCode       String?  @map("cups_code") @db.VarChar(20)
+  description    String   @db.VarChar(500)
+  quantity       Int      @default(1)
+  unitPrice      Decimal  @map("unit_price") @db.Decimal(15, 2)
+  totalPrice     Decimal  @map("total_price") @db.Decimal(15, 2)
+  diagnosisCie   String?  @map("diagnosis_cie") @db.VarChar(20)
+  professionalId String?  @map("professional_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  invoice      Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  professional Professional? @relation(fields: [professionalId], references: [id])
+
+  @@index([invoiceId], name: "idx_invoice_items_invoice")
+  @@map("invoice_items")
+}
+
+model Claim {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId            String    @map("tenant_id") @db.Uuid
+  invoiceId           String    @map("invoice_id") @db.Uuid
+  payerId             String    @map("payer_id") @db.Uuid
+  claimNumber         String?   @map("claim_number") @db.VarChar(50)
+  claimType           String    @map("claim_type") @db.VarChar(30)
+  claimedAmount       Decimal   @map("claimed_amount") @db.Decimal(15, 2)
+  receivedAt          DateTime  @map("received_at") @db.Timestamptz(6)
+  responseDeadline    DateTime  @map("response_deadline") @db.Timestamptz(6)
+  status              String    @default("received") @db.VarChar(30)
+  ipsResponse         String?   @map("ips_response")
+  ipsResponseAt       DateTime? @map("ips_response_at") @db.Timestamptz(6)
+  acceptedAmount      Decimal?  @map("accepted_amount") @db.Decimal(15, 2)
+  supportDocumentsUrl String?   @map("support_documents_url") @db.VarChar(500)
+  respondedBy         String?   @map("responded_by") @db.Uuid
+  notes               String?
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant        Tenant  @relation(fields: [tenantId], references: [id])
+  invoice       Invoice @relation(fields: [invoiceId], references: [id])
+  payer         Payer   @relation(fields: [payerId], references: [id])
+  respondedByUser User? @relation("ClaimRespondedBy", fields: [respondedBy], references: [id])
+
+  @@index([tenantId, status], name: "idx_claims_tenant")
+  @@index([invoiceId], name: "idx_claims_invoice")
+  @@index([tenantId, responseDeadline], name: "idx_claims_deadline")
+  @@map("claims")
+}
+
+model Payment {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  invoiceId       String?  @map("invoice_id") @db.Uuid
+  patientId       String?  @map("patient_id") @db.Uuid
+  paymentType     String   @map("payment_type") @db.VarChar(30)
+  paymentMethod   String   @map("payment_method") @db.VarChar(30)
+  amount          Decimal  @db.Decimal(15, 2)
+  referenceNumber String?  @map("reference_number") @db.VarChar(100)
+  receiptNumber   String?  @map("receipt_number") @db.VarChar(50)
+  cashRegisterId  String?  @map("cash_register_id") @db.Uuid
+  receivedBy      String?  @map("received_by") @db.Uuid
+  paymentDate     DateTime @default(now()) @map("payment_date") @db.Timestamptz(6)
+  notes           String?
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant         Tenant   @relation(fields: [tenantId], references: [id])
+  invoice        Invoice? @relation(fields: [invoiceId], references: [id])
+  patient        Patient? @relation(fields: [patientId], references: [id])
+  receivedByUser User?    @relation("PaymentReceivedBy", fields: [receivedBy], references: [id])
+
+  @@index([tenantId, paymentDate(sort: Desc)], name: "idx_payments_tenant")
+  @@index([invoiceId], name: "idx_payments_invoice")
+  @@index([tenantId, patientId], name: "idx_payments_patient")
+  @@map("payments")
+}
+
+model CopaymentRule {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId         String?  @map("tenant_id") @db.Uuid
+  year             Int
+  regime           String   @db.VarChar(20)
+  level            String   @db.VarChar(5)
+  serviceCategory  String   @map("service_category") @db.VarChar(50)
+  moderatingFee    Decimal? @map("moderating_fee") @db.Decimal(10, 2)
+  copayPercentage  Decimal? @map("copay_percentage") @db.Decimal(5, 2)
+  copayMaxPerEvent Decimal? @map("copay_max_per_event") @db.Decimal(15, 2)
+  copayMaxAnnual   Decimal? @map("copay_max_annual") @db.Decimal(15, 2)
+  isActive         Boolean  @default(true) @map("is_active")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, year, regime, level, serviceCategory])
+  @@map("copayment_rules")
+}
+
+model PatientCopayAccumulator {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  patientId String   @map("patient_id") @db.Uuid
+  year      Int
+  totalPaid Decimal  @default(0) @map("total_paid") @db.Decimal(15, 2)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@unique([tenantId, patientId, year])
+  @@index([tenantId, patientId, year], name: "idx_copay_accum_tenant_patient")
+  @@map("patient_copay_accumulator")
+}
+
+// =============================================================================
+// 5. PROGRAMS CONTEXT
+// =============================================================================
+
+model TreatmentProgram {
+  id                       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId                 String    @map("tenant_id") @db.Uuid
+  patientId                String    @map("patient_id") @db.Uuid
+  programType              String    @map("program_type") @db.VarChar(100)
+  name                     String    @db.VarChar(200)
+  startDate                DateTime  @map("start_date") @db.Date
+  expectedEndDate          DateTime? @map("expected_end_date") @db.Date
+  actualEndDate            DateTime? @map("actual_end_date") @db.Date
+  status                   String    @default("active") @db.VarChar(20)
+  responsibleProfessionalId String   @map("responsible_professional_id") @db.Uuid
+  notes                    String?
+  createdBy                String    @map("created_by") @db.Uuid
+  createdAt                DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant                  Tenant       @relation(fields: [tenantId], references: [id])
+  patient                 Patient      @relation(fields: [patientId], references: [id])
+  responsibleProfessional Professional @relation(fields: [responsibleProfessionalId], references: [id])
+  createdByUser           User         @relation("TreatmentProgramCreatedBy", fields: [createdBy], references: [id])
+  phases                  ProgramPhase[]
+
+  @@index([tenantId, patientId], name: "idx_programs_tenant_patient")
+  @@index([tenantId, status], name: "idx_programs_status")
+  @@map("treatment_programs")
+}
+
+model ProgramPhase {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  programId            String    @map("program_id") @db.Uuid
+  phaseNumber          Int       @map("phase_number")
+  name                 String    @db.VarChar(200)
+  description          String?
+  expectedDate         DateTime? @map("expected_date") @db.Date
+  actualDate           DateTime? @map("actual_date") @db.Date
+  appointmentId        String?   @map("appointment_id") @db.Uuid
+  procedureId          String?   @map("procedure_id") @db.Uuid
+  requiredProfessionals Json     @default("[]") @map("required_professionals")
+  requiredServices     Json      @default("[]") @map("required_services")
+  status               String    @default("pending") @db.VarChar(20)
+  sortOrder            Int       @default(0) @map("sort_order")
+  notes                String?
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  program     TreatmentProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  appointment Appointment?     @relation(fields: [appointmentId], references: [id])
+  procedure   Procedure?       @relation(fields: [procedureId], references: [id])
+
+  @@index([programId], name: "idx_phases_program")
+  @@index([programId, status], name: "idx_phases_status")
+  @@map("program_phases")
+}
+
+// =============================================================================
+// 6. COMMUNICATION CONTEXT
+// =============================================================================
+
+model PreparationProtocol {
+  id                      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId                String   @map("tenant_id") @db.Uuid
+  serviceTypeId           String   @map("service_type_id") @db.Uuid
+  name                    String   @db.VarChar(200)
+  contentHtml             String   @map("content_html")
+  contentPlain            String   @map("content_plain")
+  pdfUrl                  String?  @map("pdf_url") @db.VarChar(500)
+  daysBeforeSend          Int      @default(3) @map("days_before_send")
+  reminderHours           Json     @default("[72, 24, 4]") @map("reminder_hours")
+  requiresReadConfirmation Boolean @default(false) @map("requires_read_confirmation")
+  version                 Int      @default(1)
+  isActive                Boolean  @default(true) @map("is_active")
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id])
+  serviceType ServiceType @relation(fields: [serviceTypeId], references: [id])
+
+  @@index([tenantId], name: "idx_prep_protocols_tenant")
+  @@index([serviceTypeId], name: "idx_prep_protocols_service")
+  @@map("preparation_protocols")
+}
+
+model Notification {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId           String    @map("tenant_id") @db.Uuid
+  patientId          String?   @map("patient_id") @db.Uuid
+  userId             String?   @map("user_id") @db.Uuid
+  channel            String    @db.VarChar(20)
+  notificationType   String    @map("notification_type") @db.VarChar(50)
+  recipient          String    @db.VarChar(200)
+  subject            String?   @db.VarChar(300)
+  content            String
+  relatedEntityType  String?   @map("related_entity_type") @db.VarChar(50)
+  relatedEntityId    String?   @map("related_entity_id") @db.Uuid
+  status             String    @default("pending") @db.VarChar(20)
+  externalId         String?   @map("external_id") @db.VarChar(200)
+  errorMessage       String?   @map("error_message")
+  sentAt             DateTime? @map("sent_at") @db.Timestamptz(6)
+  deliveredAt        DateTime? @map("delivered_at") @db.Timestamptz(6)
+  readAt             DateTime? @map("read_at") @db.Timestamptz(6)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id])
+  patient Patient? @relation(fields: [patientId], references: [id])
+
+  @@index([tenantId, createdAt(sort: Desc)], name: "idx_notifications_tenant")
+  @@index([tenantId, status, createdAt], name: "idx_notifications_status")
+  @@index([tenantId, patientId], name: "idx_notifications_patient")
+  @@map("notifications")
+}
+
+// =============================================================================
+// 7. QUALITY CONTEXT
+// =============================================================================
+
+// audit_logs es particionada por mes en PostgreSQL.
+// Prisma la gestiona como tabla regular; el particionamiento
+// se aplica vía migración SQL personalizada.
+model AuditLog {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  userId     String?  @map("user_id") @db.Uuid
+  action     String   @db.VarChar(30)
+  entityType String   @map("entity_type") @db.VarChar(100)
+  entityId   String?  @map("entity_id") @db.Uuid
+  changes    Json?
+  ipAddress  String?  @map("ip_address") @db.VarChar(45)
+  userAgent  String?  @map("user_agent")
+  sessionId  String?  @map("session_id") @db.Uuid
+  metadata   Json     @default("{}")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([tenantId, createdAt(sort: Desc)], name: "idx_audit_tenant_time")
+  @@index([tenantId, entityType, entityId], name: "idx_audit_entity")
+  @@index([tenantId, userId, createdAt(sort: Desc)], name: "idx_audit_user")
+  @@map("audit_logs")
+}
+
+model AdverseEvent {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId            String    @map("tenant_id") @db.Uuid
+  patientId           String    @map("patient_id") @db.Uuid
+  reportedBy          String    @map("reported_by") @db.Uuid
+  eventDate           DateTime  @map("event_date") @db.Timestamptz(6)
+  eventType           String    @map("event_type") @db.VarChar(100)
+  severity            String    @db.VarChar(20)
+  description         String
+  immediateActions    String?   @map("immediate_actions")
+  rootCauseAnalysis   String?   @map("root_cause_analysis")
+  correctiveActions   String?   @map("corrective_actions")
+  relatedProcedureId  String?   @map("related_procedure_id") @db.Uuid
+  status              String    @default("reported") @db.VarChar(20)
+  resolvedAt          DateTime? @map("resolved_at") @db.Timestamptz(6)
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant            Tenant     @relation(fields: [tenantId], references: [id])
+  patient           Patient    @relation(fields: [patientId], references: [id])
+  reportedByUser    User       @relation("AdverseEventReportedBy", fields: [reportedBy], references: [id])
+  relatedProcedure  Procedure? @relation(fields: [relatedProcedureId], references: [id])
+
+  @@index([tenantId, eventDate(sort: Desc)], name: "idx_adverse_events_tenant")
+  @@map("adverse_events")
+}
+
+// =============================================================================
+// 8. CATÁLOGOS GLOBALES (sin tenant_id)
+// =============================================================================
+
+model Cie10Code {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String  @unique @db.VarChar(10)
+  description String  @db.VarChar(500)
+  chapter     String? @db.VarChar(10)
+  groupCode   String? @map("group_code") @db.VarChar(10)
+  isActive    Boolean @default(true) @map("is_active")
+
+  @@index([code], name: "idx_cie10_code")
+  @@map("cie10_codes")
+}
+
+model Cie11Code {
+  id               String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code             String  @unique @db.VarChar(20)
+  description      String  @db.VarChar(500)
+  cie10Equivalent  String? @map("cie10_equivalent") @db.VarChar(10)
+  isActive         Boolean @default(true) @map("is_active")
+
+  @@index([code], name: "idx_cie11_code")
+  @@map("cie11_codes")
+}
+
+model CupsCode {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String  @unique @db.VarChar(20)
+  description String  @db.VarChar(500)
+  groupName   String? @map("group_name") @db.VarChar(200)
+  isActive    Boolean @default(true) @map("is_active")
+
+  @@index([code], name: "idx_cups_code")
+  @@map("cups_codes")
+}
+
+model IumMedication {
+  id                  String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code                String? @unique @db.VarChar(50)
+  genericName         String  @map("generic_name") @db.VarChar(500)
+  atcCode             String? @map("atc_code") @db.VarChar(20)
+  pharmaceuticalForm  String? @map("pharmaceutical_form") @db.VarChar(100)
+  concentration       String? @db.VarChar(100)
+  administrationRoute String? @map("administration_route") @db.VarChar(50)
+  isPbs               Boolean @default(false) @map("is_pbs")
+  isControlled        Boolean @default(false) @map("is_controlled")
+  isActive            Boolean @default(true) @map("is_active")
+
+  @@index([atcCode], name: "idx_ium_atc")
+  @@map("ium_medications")
+}
+
+model DaneMunicipality {
+  id             String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code           String  @unique @db.VarChar(10)
+  name           String  @db.VarChar(200)
+  departmentCode String  @map("department_code") @db.VarChar(5)
+  departmentName String  @map("department_name") @db.VarChar(200)
+  isActive       Boolean @default(true) @map("is_active")
+
+  @@index([code], name: "idx_dane_code")
+  @@map("dane_municipalities")
+}

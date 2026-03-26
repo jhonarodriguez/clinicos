@@ -1,0 +1,24 @@
+{
+  "name": "@clinicos/database",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:seed:dev": "tsx prisma/seed-dev.ts",
+    "db:studio": "prisma studio"
+  },
+  "devDependencies": {
+    "prisma": "^6.19.2",
+    "tsx": "^4.21.0"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.2",
+    "@types/bcrypt": "^6.0.0",
+    "bcrypt": "^6.0.0"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  }
+}

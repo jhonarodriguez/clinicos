@@ -1,0 +1,90 @@
+name: clinicos-dev
+
+services:
+  # ─────────────────────────────────────────────
+  # REDIS — Cache + Colas BullMQ
+  # ─────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: clinicos_redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    command: redis-server --save 20 1 --loglevel warning
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ─────────────────────────────────────────────
+  # MINIO — Almacenamiento de archivos (S3-compatible)
+  # ─────────────────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: clinicos_minio
+    restart: unless-stopped
+    ports:
+      - '9000:9000'   # API S3
+      - '9001:9001'   # Consola web
+    volumes:
+      - minio_data:/data
+    environment:
+      MINIO_ROOT_USER: clinicos_minio
+      MINIO_ROOT_PASSWORD: clinicos_minio_secret
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # ─────────────────────────────────────────────
+  # MEILISEARCH — Motor de búsqueda
+  # ─────────────────────────────────────────────
+  meilisearch:
+    image: getmeili/meilisearch:v1.12
+    container_name: clinicos_meilisearch
+    restart: unless-stopped
+    ports:
+      - '7700:7700'
+    volumes:
+      - meilisearch_data:/meili_data
+    environment:
+      MEILI_MASTER_KEY: clinicos_meili_key
+      MEILI_ENV: development
+
+  # ─────────────────────────────────────────────
+  # MAILHOG — Servidor de email para desarrollo
+  # Captura todos los emails sin enviarlos
+  # UI: http://localhost:8025
+  # ─────────────────────────────────────────────
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: clinicos_mailhog
+    restart: unless-stopped
+    ports:
+      - '1025:1025'   # SMTP
+      - '8025:8025'   # UI web
+
+  # ─────────────────────────────────────────────
+  # ADMINER — UI para explorar la base de datos remota
+  # http://localhost:8080
+  # Conectar a: 155.133.26.231 / finanzas_user / clinicos_dev
+  # ─────────────────────────────────────────────
+  adminer:
+    image: adminer:latest
+    container_name: clinicos_adminer
+    restart: unless-stopped
+    ports:
+      - '8080:8080'
+    environment:
+      ADMINER_DEFAULT_SERVER: 155.133.26.231
+      ADMINER_DESIGN: pepa-linha
+
+volumes:
+  redis_data:
+  minio_data:
+  meilisearch_data:
