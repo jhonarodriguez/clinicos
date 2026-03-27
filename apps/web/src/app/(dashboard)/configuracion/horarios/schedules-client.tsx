@@ -130,65 +130,65 @@ function ScheduleModal({
         <div className="overflow-y-auto flex-1 p-5 space-y-4">
           {!isEdit && (
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={labelCls}>Profesional *</label>
+              <label className="block">
+                <span className={labelCls}>Profesional *</span>
                 <select value={form.professionalId} onChange={(e) => set('professionalId', e.target.value)} className={inputCls}>
                   <option value="">Seleccionar…</option>
                   {professionals.map((p) => (
                     <option key={p.id} value={p.id}>{p.user.firstName} {p.user.lastName}</option>
                   ))}
                 </select>
-              </div>
-              <div>
-                <label className={labelCls}>Sede *</label>
+              </label>
+              <label className="block">
+                <span className={labelCls}>Sede *</span>
                 <select value={form.siteId} onChange={(e) => set('siteId', e.target.value)} className={inputCls}>
                   <option value="">Seleccionar…</option>
                   {sites.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
-              </div>
+              </label>
             </div>
           )}
 
-          <div>
-            <label className={labelCls}>Día de la semana *</label>
+          <label className="block">
+            <span className={labelCls}>Día de la semana *</span>
             <select value={form.dayOfWeek} onChange={(e) => set('dayOfWeek', e.target.value)} className={inputCls}>
-              {DAYS.map((d, i) => <option key={i} value={i}>{d}</option>)}
+              {DAYS.map((d, i) => <option key={d} value={i}>{d}</option>)}
             </select>
-          </div>
+          </label>
 
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelCls}>Hora inicio *</label>
+            <label className="block">
+              <span className={labelCls}>Hora inicio *</span>
               <input type="time" value={form.startTime} onChange={(e) => set('startTime', e.target.value)} className={inputCls} />
-            </div>
-            <div>
-              <label className={labelCls}>Hora fin *</label>
+            </label>
+            <label className="block">
+              <span className={labelCls}>Hora fin *</span>
               <input type="time" value={form.endTime} onChange={(e) => set('endTime', e.target.value)} className={inputCls} />
-            </div>
+            </label>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelCls}>Duración slot (min) *</label>
+            <label className="block">
+              <span className={labelCls}>Duración slot (min) *</span>
               <input type="number" min={5} max={120} value={form.slotDurationMin}
                 onChange={(e) => set('slotDurationMin', e.target.value)} className={inputCls} />
-            </div>
-            <div>
-              <label className={labelCls}>Overbooking extra</label>
+            </label>
+            <label className="block">
+              <span className={labelCls}>Overbooking extra</span>
               <input type="number" min={0} max={10} value={form.maxOverbooking}
                 onChange={(e) => set('maxOverbooking', e.target.value)} className={inputCls} />
-            </div>
+            </label>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelCls}>Vigente desde *</label>
+            <label className="block">
+              <span className={labelCls}>Vigente desde *</span>
               <input type="date" value={form.validFrom} onChange={(e) => set('validFrom', e.target.value)} className={inputCls} />
-            </div>
-            <div>
-              <label className={labelCls}>Vigente hasta (vacío = indefinido)</label>
+            </label>
+            <label className="block">
+              <span className={labelCls}>Vigente hasta (vacío = indefinido)</span>
               <input type="date" value={form.validUntil} onChange={(e) => set('validUntil', e.target.value)} className={inputCls} />
-            </div>
+            </label>
           </div>
 
           <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
@@ -266,34 +266,34 @@ function BlockModal({
 
         <div className="p-5 space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelCls}>Tipo *</label>
+            <label className="block">
+              <span className={labelCls}>Tipo *</span>
               <select value={form.blockType} onChange={(e) => set('blockType', e.target.value)} className={inputCls}>
                 {Object.entries(BLOCK_TYPES).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
-            </div>
-            <div>
-              <label className={labelCls}>Profesional *</label>
+            </label>
+            <label className="block">
+              <span className={labelCls}>Profesional *</span>
               <select value={form.professionalId} onChange={(e) => set('professionalId', e.target.value)} className={inputCls}>
                 <option value="">Seleccionar…</option>
                 {professionals.map((p) => (
                   <option key={p.id} value={p.id}>{p.user.firstName} {p.user.lastName}</option>
                 ))}
               </select>
-            </div>
+            </label>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelCls}>Inicio *</label>
+            <label className="block">
+              <span className={labelCls}>Inicio *</span>
               <input type="datetime-local" value={form.startDatetime}
                 onChange={(e) => set('startDatetime', e.target.value)} className={inputCls} />
-            </div>
-            <div>
-              <label className={labelCls}>Fin *</label>
+            </label>
+            <label className="block">
+              <span className={labelCls}>Fin *</span>
               <input type="datetime-local" value={form.endDatetime}
                 onChange={(e) => set('endDatetime', e.target.value)} className={inputCls} />
-            </div>
+            </label>
           </div>
 
           <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
@@ -302,11 +302,11 @@ function BlockModal({
             Todo el día
           </label>
 
-          <div>
-            <label className={labelCls}>Motivo</label>
+          <label className="block">
+            <span className={labelCls}>Motivo</span>
             <input value={form.reason} onChange={(e) => set('reason', e.target.value)}
               className={inputCls} placeholder="Opcional…" />
-          </div>
+          </label>
 
           {error && <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
         </div>

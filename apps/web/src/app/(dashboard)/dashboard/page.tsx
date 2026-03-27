@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import {
   Activity,
   AlertTriangle,
@@ -144,7 +145,7 @@ export default function DashboardPage() {
         <div className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white">
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
             <span className="text-sm font-semibold text-slate-900">Agenda de hoy</span>
-            <a href="/agenda" className="text-xs font-medium text-blue-600 hover:underline">Ver todo →</a>
+            <Link href="/agenda" className="text-xs font-medium text-blue-600 hover:underline">Ver todo →</Link>
           </div>
           <div className="divide-y divide-slate-50">
             <AptRow time="08:30" dotColor="bg-blue-500" name="María García López" detail="Consulta general · Dr. Ramírez" status="Confirmada" />

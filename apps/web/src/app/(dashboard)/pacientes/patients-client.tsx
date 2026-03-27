@@ -71,12 +71,12 @@ function Field({
   children: React.ReactNode
 }) {
   return (
-    <div className="space-y-1">
-      <label className="text-xs font-medium text-slate-600">
+    <label className="block space-y-1">
+      <span className="text-xs font-medium text-slate-600">
         {label} {required && <span className="text-red-500">*</span>}
-      </label>
+      </span>
       {children}
-    </div>
+    </label>
   )
 }
 

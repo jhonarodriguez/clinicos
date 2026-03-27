@@ -212,6 +212,9 @@ export function TenantsListClient() {
                   <tr
                     key={t.id}
                     onClick={() => router.push(`/admin/tenants/${t.id}`)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') router.push(`/admin/tenants/${t.id}`) }}
+                    role="button"
+                    tabIndex={0}
                     className="hover:bg-slate-50/50 transition-colors cursor-pointer"
                   >
                     <td className="px-4 py-3">

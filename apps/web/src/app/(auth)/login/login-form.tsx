@@ -108,9 +108,9 @@ export function LoginForm() {
           <input type="checkbox" className="h-4 w-4 rounded border-slate-300 accent-blue-600" />
           Recuérdame
         </label>
-        <a href="#" className="text-sm text-blue-600 hover:underline">
+        <button type="button" className="text-sm text-blue-600 hover:underline">
           ¿Olvidaste tu contraseña?
-        </a>
+        </button>
       </div>
 
       {error && (
