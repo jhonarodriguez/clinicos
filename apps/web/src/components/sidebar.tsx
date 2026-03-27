@@ -6,6 +6,7 @@ import {
   Activity,
   Bell,
   Calendar,
+  CalendarClock,
   Cpu,
   DoorOpen,
   FileText,
@@ -30,6 +31,7 @@ const adminNav = [
   { href: '/facturacion', label: 'Facturación', icon: Receipt },
   { href: '/configuracion/servicios', label: 'Tipos de Servicio', icon: Activity },
   { href: '/configuracion/recursos', label: 'Recursos', icon: DoorOpen },
+  { href: '/configuracion/horarios', label: 'Horarios', icon: CalendarClock },
   { href: '/settings/users', label: 'Usuarios', icon: Settings },
   { href: '/settings/roles', label: 'Roles y Permisos', icon: Shield },
 ]

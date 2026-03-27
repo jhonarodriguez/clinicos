@@ -8,6 +8,11 @@ import { PatientsModule } from './patients/patients.module'
 import { ResourcesModule } from './resources/resources.module'
 import { ServiceTypesModule } from './service-types/service-types.module'
 import { ProfessionalsModule } from './professionals/professionals.module'
+import { SchedulesModule } from './schedules/schedules.module'
+import { ScheduleBlocksModule } from './schedule-blocks/schedule-blocks.module'
+import { AvailabilityModule } from './availability/availability.module'
+import { AppointmentsModule } from './appointments/appointments.module'
+import { WaitlistModule } from './waitlist/waitlist.module'
 import { HealthController } from './health/health.controller'
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard'
 import { AllExceptionsFilter } from './common/filters/http-exception.filter'
@@ -24,6 +29,11 @@ import { RlsInterceptor } from './common/interceptors/rls.interceptor'
     ResourcesModule,
     ServiceTypesModule,
     ProfessionalsModule,
+    SchedulesModule,
+    ScheduleBlocksModule,
+    AvailabilityModule,
+    AppointmentsModule,
+    WaitlistModule,
   ],
   controllers: [HealthController],
   providers: [

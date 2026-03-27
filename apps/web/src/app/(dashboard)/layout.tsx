@@ -16,6 +16,7 @@ const titles: Record<string, string> = {
   '/facturacion': 'Facturación',
   '/configuracion/servicios': 'Tipos de Servicio',
   '/configuracion/recursos': 'Recursos',
+  '/configuracion/horarios': 'Horarios y Bloqueos',
   '/settings/users': 'Usuarios',
   '/settings/roles': 'Roles y Permisos',
 }
