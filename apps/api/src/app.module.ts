@@ -4,6 +4,10 @@ import { ConfigModule } from '@nestjs/config'
 import { PrismaModule } from './prisma/prisma.module'
 import { AuthModule } from './auth/auth.module'
 import { IdentityModule } from './identity/identity.module'
+import { PatientsModule } from './patients/patients.module'
+import { ResourcesModule } from './resources/resources.module'
+import { ServiceTypesModule } from './service-types/service-types.module'
+import { ProfessionalsModule } from './professionals/professionals.module'
 import { HealthController } from './health/health.controller'
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard'
 import { AllExceptionsFilter } from './common/filters/http-exception.filter'
@@ -16,6 +20,10 @@ import { RlsInterceptor } from './common/interceptors/rls.interceptor'
     PrismaModule,
     AuthModule,
     IdentityModule,
+    PatientsModule,
+    ResourcesModule,
+    ServiceTypesModule,
+    ProfessionalsModule,
   ],
   controllers: [HealthController],
   providers: [

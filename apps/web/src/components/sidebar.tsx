@@ -6,6 +6,8 @@ import {
   Activity,
   Bell,
   Calendar,
+  Cpu,
+  DoorOpen,
   FileText,
   LayoutDashboard,
   Receipt,
@@ -20,12 +22,14 @@ const clinicaNav = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/agenda', label: 'Agenda', icon: Calendar },
   { href: '/pacientes', label: 'Pacientes', icon: Users },
+  { href: '/profesionales', label: 'Profesionales', icon: Stethoscope },
   { href: '/historia-clinica', label: 'Historia Clínica', icon: FileText },
-  { href: '/procedimientos', label: 'Procedimientos', icon: Stethoscope },
 ]
 
 const adminNav = [
   { href: '/facturacion', label: 'Facturación', icon: Receipt },
+  { href: '/configuracion/servicios', label: 'Tipos de Servicio', icon: Activity },
+  { href: '/configuracion/recursos', label: 'Recursos', icon: DoorOpen },
   { href: '/settings/users', label: 'Usuarios', icon: Settings },
   { href: '/settings/roles', label: 'Roles y Permisos', icon: Shield },
 ]

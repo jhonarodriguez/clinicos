@@ -10,9 +10,14 @@ const titles: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/agenda': 'Agenda',
   '/pacientes': 'Pacientes',
+  '/profesionales': 'Profesionales',
   '/historia-clinica': 'Historia Clínica',
   '/procedimientos': 'Procedimientos',
   '/facturacion': 'Facturación',
+  '/configuracion/servicios': 'Tipos de Servicio',
+  '/configuracion/recursos': 'Recursos',
+  '/settings/users': 'Usuarios',
+  '/settings/roles': 'Roles y Permisos',
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
