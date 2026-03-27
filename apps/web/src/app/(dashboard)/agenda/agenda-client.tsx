@@ -14,6 +14,9 @@ import {
   Stethoscope,
   CheckCircle,
   AlertCircle,
+  Calendar,
+  CalendarDays,
+  LayoutGrid,
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -75,27 +78,28 @@ const STATUS_LABELS: Record<string, string> = {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  scheduled: 'bg-slate-100 text-slate-700',
-  confirmed: 'bg-blue-50 text-blue-700',
-  arrived: 'bg-amber-50 text-amber-700',
-  in_progress: 'bg-green-50 text-green-700',
-  completed: 'bg-emerald-50 text-emerald-700',
-  cancelled: 'bg-red-50 text-red-600',
-  no_show: 'bg-rose-50 text-rose-600',
+  scheduled:   'bg-slate-100 text-slate-600',
+  confirmed:   'bg-blue-100 text-blue-700',
+  arrived:     'bg-amber-100 text-amber-700',
+  in_progress: 'bg-green-100 text-green-700',
+  completed:   'bg-emerald-100 text-emerald-700',
+  cancelled:   'bg-red-100 text-red-600',
+  no_show:     'bg-rose-100 text-rose-600',
 }
 
 const STATUS_BLOCK_COLORS: Record<string, { bg: string; border: string; title: string; sub: string }> = {
-  scheduled: { bg: 'bg-slate-50', border: 'border-slate-200', title: 'text-slate-900', sub: 'text-slate-500' },
-  confirmed: { bg: 'bg-blue-50', border: 'border-blue-200', title: 'text-blue-900', sub: 'text-blue-500' },
-  arrived: { bg: 'bg-amber-50', border: 'border-amber-200', title: 'text-amber-900', sub: 'text-amber-600' },
-  in_progress: { bg: 'bg-green-50', border: 'border-green-200', title: 'text-green-900', sub: 'text-green-600' },
-  completed: { bg: 'bg-emerald-50', border: 'border-emerald-200', title: 'text-emerald-900', sub: 'text-emerald-600' },
-  cancelled: { bg: 'bg-red-50', border: 'border-red-200', title: 'text-red-900', sub: 'text-red-400' },
-  no_show: { bg: 'bg-rose-50', border: 'border-rose-200', title: 'text-rose-900', sub: 'text-rose-400' },
+  scheduled:   { bg: 'bg-slate-50',   border: 'border-slate-200',  title: 'text-slate-800',   sub: 'text-slate-500' },
+  confirmed:   { bg: 'bg-blue-50',    border: 'border-blue-200',   title: 'text-blue-900',    sub: 'text-blue-500' },
+  arrived:     { bg: 'bg-amber-50',   border: 'border-amber-200',  title: 'text-amber-900',   sub: 'text-amber-600' },
+  in_progress: { bg: 'bg-green-50',   border: 'border-green-200',  title: 'text-green-900',   sub: 'text-green-600' },
+  completed:   { bg: 'bg-emerald-50', border: 'border-emerald-200',title: 'text-emerald-900', sub: 'text-emerald-600' },
+  cancelled:   { bg: 'bg-red-50',     border: 'border-red-200',    title: 'text-red-800',     sub: 'text-red-400' },
+  no_show:     { bg: 'bg-rose-50',    border: 'border-rose-200',   title: 'text-rose-800',    sub: 'text-rose-400' },
 }
 
 function formatDateLabel(date: Date): string {
   return date.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })
+    .replace(/^\w/, (c) => c.toUpperCase())
 }
 
 function toDateStr(date: Date): string {
@@ -110,9 +114,9 @@ function parseTime(iso: string): string {
 }
 
 // Grid: 07:00 to 19:00 in 30-min increments
-const GRID_START = 7 * 60
+const GRID_START = 6 * 60
 const GRID_END   = 19 * 60
-const SLOT_HEIGHT_PX = 48
+const SLOT_HEIGHT_PX = 36
 
 function minutesFromMidnight(iso: string): number {
   const d = new Date(iso)
@@ -154,7 +158,7 @@ function DetailPanel({
     },
   })
 
-  const label = STATUS_LABELS[appt.status] ?? appt.status
+  const label     = STATUS_LABELS[appt.status] ?? appt.status
   const canConfirm  = appt.status === 'scheduled'
   const canArrive   = ['scheduled', 'confirmed'].includes(appt.status)
   const canStart    = ['confirmed', 'arrived'].includes(appt.status)
@@ -163,6 +167,7 @@ function DetailPanel({
 
   return (
     <div className="flex h-full flex-col bg-white">
+      {/* Header */}
       <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
         <span className="text-sm font-semibold text-slate-900">Detalle de cita</span>
         <button onClick={onClose} className="flex h-6 w-6 items-center justify-center rounded bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors">
@@ -170,50 +175,60 @@ function DetailPanel({
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-4 p-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Patient */}
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-50">
             <User className="h-5 w-5 text-blue-600" />
           </div>
-          <div>
-            <p className="text-sm font-semibold text-slate-900">{appt.patient.firstName} {appt.patient.firstLastName}</p>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-slate-900 truncate">
+              {appt.patient.firstName} {appt.patient.firstLastName}
+            </p>
             <p className="text-xs text-slate-500">CC {appt.patient.documentNumber}</p>
           </div>
         </div>
 
         <div className="h-px bg-slate-100" />
 
+        {/* Info rows */}
         <div className="space-y-2.5">
           {[
-            { icon: Stethoscope, label: 'Servicio', value: appt.serviceType.name },
-            { icon: User, label: 'Profesional', value: `${appt.professional.user.firstName} ${appt.professional.user.lastName}` },
-            { icon: Clock, label: 'Hora', value: `${parseTime(appt.scheduledStart)} – ${parseTime(appt.scheduledEnd)}` },
-            { icon: MapPin, label: 'Sede', value: appt.site.name },
+            { icon: Stethoscope, label: 'Tipo',   value: appt.serviceType.name },
+            { icon: User,        label: 'Médico',  value: `${appt.professional.user.firstName} ${appt.professional.user.lastName}` },
+            { icon: Clock,       label: 'Hora',    value: `${parseTime(appt.scheduledStart)} – ${parseTime(appt.scheduledEnd)}` },
+            { icon: MapPin,      label: 'Sede',    value: appt.site.name },
           ].map(({ icon: Icon, label: l, value }) => (
             <div key={l} className="flex items-start gap-2 text-sm">
               <Icon className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
-              <div className="flex-1 flex justify-between">
-                <span className="text-slate-400">{l}</span>
-                <span className="font-medium text-slate-900 text-right max-w-[60%]">{value}</span>
+              <div className="flex-1 flex justify-between gap-2">
+                <span className="text-slate-400 shrink-0">{l}</span>
+                <span className="font-medium text-slate-900 text-right">{value}</span>
               </div>
             </div>
           ))}
+
+          {/* Estado */}
           <div className="flex items-center gap-2 text-sm">
             <CheckCircle className="h-4 w-4 text-slate-400 shrink-0" />
-            <div className="flex-1 flex justify-between">
-              <span className="text-slate-400">Estado</span>
+            <div className="flex-1 flex justify-between gap-2">
+              <span className="text-slate-400 shrink-0">Estado</span>
               <span className={`rounded px-2 py-0.5 text-[11px] font-medium ${STATUS_COLORS[appt.status]}`}>{label}</span>
             </div>
           </div>
+
+          {/* Consultorio */}
           {appt.room && (
             <div className="flex items-center gap-2 text-sm">
               <MapPin className="h-4 w-4 text-slate-400 shrink-0" />
-              <div className="flex-1 flex justify-between">
-                <span className="text-slate-400">Consultorio</span>
+              <div className="flex-1 flex justify-between gap-2">
+                <span className="text-slate-400 shrink-0">Consultorio</span>
                 <span className="font-medium text-slate-900">{appt.room.name}</span>
               </div>
             </div>
           )}
+
+          {/* Primera visita */}
           {appt.isFirstVisit && (
             <div className="rounded-lg bg-amber-50 border border-amber-100 px-3 py-2 text-xs text-amber-700">
               Primera visita del paciente
@@ -221,11 +236,12 @@ function DetailPanel({
           )}
         </div>
 
+        {/* Notes */}
         {appt.notes && (
           <>
             <div className="h-px bg-slate-100" />
-            <div className="space-y-1">
-              <p className="text-xs text-slate-400">Notas</p>
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-slate-400">Notas</p>
               <p className="text-xs leading-relaxed text-slate-600">{appt.notes}</p>
             </div>
           </>
@@ -238,28 +254,29 @@ function DetailPanel({
         )}
       </div>
 
+      {/* Actions */}
       <div className="space-y-2 border-t border-slate-100 p-4">
         {canConfirm && (
           <button onClick={() => updateMutation.mutate({ status: 'confirmed' })} disabled={updateMutation.isPending}
-            className="w-full rounded-lg bg-blue-600 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors disabled:opacity-50">
+            className="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors disabled:opacity-50">
             Confirmar cita
           </button>
         )}
         {canArrive && (
           <button onClick={() => updateMutation.mutate({ status: 'arrived', arrivalAt: new Date().toISOString() })} disabled={updateMutation.isPending}
-            className="w-full rounded-lg bg-amber-500 py-2 text-sm font-semibold text-white hover:bg-amber-600 transition-colors disabled:opacity-50">
+            className="w-full rounded-lg bg-amber-500 py-2.5 text-sm font-semibold text-white hover:bg-amber-600 transition-colors disabled:opacity-50">
             Registrar llegada
           </button>
         )}
         {canStart && (
           <button onClick={() => updateMutation.mutate({ status: 'in_progress', actualStart: new Date().toISOString() })} disabled={updateMutation.isPending}
-            className="w-full rounded-lg bg-green-600 py-2 text-sm font-semibold text-white hover:bg-green-700 transition-colors disabled:opacity-50">
+            className="w-full rounded-lg bg-green-600 py-2.5 text-sm font-semibold text-white hover:bg-green-700 transition-colors disabled:opacity-50">
             Iniciar consulta
           </button>
         )}
         {canComplete && (
           <button onClick={() => updateMutation.mutate({ status: 'completed', actualEnd: new Date().toISOString() })} disabled={updateMutation.isPending}
-            className="w-full rounded-lg bg-emerald-600 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors disabled:opacity-50">
+            className="w-full rounded-lg bg-emerald-600 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors disabled:opacity-50">
             Completar consulta
           </button>
         )}
@@ -271,11 +288,32 @@ function DetailPanel({
               updateMutation.mutate({ status: 'cancelled', cancellationReason: reason, cancelledBy: 'staff' })
             }}
             disabled={updateMutation.isPending}
-            className="w-full rounded-lg border border-slate-200 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50">
+            className="w-full rounded-lg border border-slate-200 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50">
             Cancelar cita
           </button>
         )}
       </div>
+    </div>
+  )
+}
+
+// ─── Detail Panel Placeholder ─────────────────────────────────────────────────
+
+function DetailPanelPlaceholder({ onNew }: { onNew: () => void }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
+        <Calendar className="h-7 w-7 text-slate-400" />
+      </div>
+      <div className="space-y-1">
+        <p className="text-sm font-medium text-slate-600">Ninguna cita seleccionada</p>
+        <p className="text-xs text-slate-400">Haz clic en una cita del calendario para ver su detalle</p>
+      </div>
+      <button onClick={onNew}
+        className="mt-1 flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition-colors">
+        <Plus className="h-3.5 w-3.5" />
+        Nueva cita
+      </button>
     </div>
   )
 }
@@ -517,10 +555,19 @@ function NewAppointmentModal({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
+type ViewMode = 'day' | 'week' | 'month'
+
+const VIEW_OPTIONS: { key: ViewMode; label: string; icon: React.ElementType }[] = [
+  { key: 'day',   label: 'Día',    icon: Calendar },
+  { key: 'week',  label: 'Semana', icon: CalendarDays },
+  { key: 'month', label: 'Mes',    icon: LayoutGrid },
+]
+
 export function AgendaClient() {
   const qc = useQueryClient()
 
   const [currentDate, setCurrentDate] = useState<Date>(() => new Date())
+  const [viewMode, setViewMode] = useState<ViewMode>('day')
   const [selectedProfId, setSelectedProfId] = useState('')
   const [selectedApptId, setSelectedApptId] = useState<string | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
@@ -565,24 +612,44 @@ export function AgendaClient() {
   const gridTotalHeight = ((GRID_END - GRID_START) / 60) * SLOT_HEIGHT_PX * 2
 
   return (
-    <div className="flex flex-1 overflow-hidden relative">
+    <div className="flex h-full overflow-hidden">
       {/* ── Calendar panel ── */}
-      <div className="flex flex-1 flex-col overflow-hidden bg-white">
+      <div className="flex flex-1 flex-col overflow-hidden bg-white min-w-0">
         {/* Toolbar */}
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-3 py-2 lg:px-4 lg:py-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-3 py-2.5 lg:px-4">
+          {/* Left: date navigation */}
           <div className="flex items-center gap-1.5">
-            <button onClick={prevDay} className="flex h-7 w-7 items-center justify-center rounded-md bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+            <button onClick={prevDay}
+              className="flex h-7 w-7 items-center justify-center rounded-md bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
               <ChevronLeft className="h-3.5 w-3.5" />
             </button>
-            <button onClick={goToday} className="px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-md transition-colors capitalize">
+            <button onClick={goToday}
+              className="px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-md transition-colors">
               {formatDateLabel(currentDate)}
             </button>
-            <button onClick={nextDay} className="flex h-7 w-7 items-center justify-center rounded-md bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+            <button onClick={nextDay}
+              className="flex h-7 w-7 items-center justify-center rounded-md bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
               <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </div>
 
+          {/* Right: view switcher + professional filter + new */}
           <div className="flex items-center gap-2">
+            {/* View switcher */}
+            <div className="hidden sm:flex items-center gap-0.5 rounded-lg bg-slate-100 p-0.5">
+              {VIEW_OPTIONS.map(({ key, label }) => (
+                <button key={key} onClick={() => setViewMode(key)}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                    viewMode === key
+                      ? 'bg-white text-slate-800 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Professional filter */}
             <select value={selectedProfId} onChange={(e) => setSelectedProfId(e.target.value)}
               className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option value="">Todos los profesionales</option>
@@ -590,6 +657,8 @@ export function AgendaClient() {
                 <option key={p.id} value={p.id}>{p.user.firstName} {p.user.lastName}</option>
               ))}
             </select>
+
+            {/* New appointment */}
             <button onClick={() => setShowNewModal(true)}
               className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition-colors">
               <Plus className="h-3.5 w-3.5" />
@@ -598,8 +667,29 @@ export function AgendaClient() {
           </div>
         </div>
 
+        {/* Week / Month placeholder */}
+        {viewMode !== 'day' && (
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center p-8">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-50">
+              {viewMode === 'week' ? <CalendarDays className="h-8 w-8 text-blue-400" /> : <LayoutGrid className="h-8 w-8 text-blue-400" />}
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-slate-700">
+                Vista de {viewMode === 'week' ? 'semana' : 'mes'} próximamente
+              </p>
+              <p className="text-xs text-slate-400">
+                Esta vista estará disponible en la próxima versión.
+              </p>
+            </div>
+            <button onClick={() => setViewMode('day')}
+              className="rounded-lg border border-slate-200 px-4 py-1.5 text-xs text-slate-600 hover:bg-slate-50 transition-colors">
+              Volver a vista de día
+            </button>
+          </div>
+        )}
+
         {/* Time grid */}
-        <div className="flex flex-1 overflow-y-auto">
+        {viewMode === 'day' && <div className="flex flex-1 min-h-0 overflow-y-auto">
           {/* Hour labels */}
           <div className="w-14 shrink-0 border-r border-slate-100 bg-slate-50 lg:w-16 relative">
             {GRID_HOURS.map((h, i) => (
@@ -611,11 +701,14 @@ export function AgendaClient() {
             <div style={{ height: gridTotalHeight }} />
           </div>
 
-          {/* Slots */}
+          {/* Appointments area */}
           <div className="flex-1 relative" style={{ height: gridTotalHeight }}>
+            {/* Hour lines */}
             {GRID_HOURS.map((h, i) => (
-              <div key={h} className="absolute left-0 right-0 border-t border-slate-100" style={{ top: i * SLOT_HEIGHT_PX * 2 }} />
+              <div key={h} className="absolute left-0 right-0 border-t border-slate-100"
+                style={{ top: i * SLOT_HEIGHT_PX * 2 }} />
             ))}
+            {/* Half-hour dashed lines */}
             {GRID_HOURS.slice(0, -1).map((h, i) => (
               <div key={`half-${h}`} className="absolute left-0 right-0 border-t border-dashed border-slate-50"
                 style={{ top: i * SLOT_HEIGHT_PX * 2 + SLOT_HEIGHT_PX }} />
@@ -638,61 +731,98 @@ export function AgendaClient() {
             )}
 
             {visibleAppts.map((appt) => {
-              const top = gridTop(appt.scheduledStart)
-              const height = Math.max(gridHeight(appt.scheduledStart, appt.scheduledEnd), 32)
-              const colors = STATUS_BLOCK_COLORS[appt.status] ?? STATUS_BLOCK_COLORS.scheduled!
+              const top       = gridTop(appt.scheduledStart)
+              const rawHeight = gridHeight(appt.scheduledStart, appt.scheduledEnd)
+              const height    = Math.max(rawHeight, 44)
+              const colors    = STATUS_BLOCK_COLORS[appt.status] ?? STATUS_BLOCK_COLORS.scheduled!
               const isSelected = selectedAppt?.id === appt.id
+              // Two-row layout when tall enough, single compact line otherwise
+              const twoRows = height >= 48
 
               return (
                 <button key={appt.id} onClick={() => selectAppt(appt)}
-                  className={`absolute left-2 right-2 rounded-lg border px-2 py-1 text-left transition-all hover:shadow-md ${colors.bg} ${colors.border} ${isSelected ? 'ring-2 ring-blue-400' : ''}`}
+                  className={`absolute left-2 right-2 rounded-lg border px-2.5 py-1.5 text-left transition-all hover:shadow-md overflow-hidden ${colors.bg} ${colors.border} ${isSelected ? 'ring-2 ring-blue-400 ring-offset-1' : ''}`}
                   style={{ top, height }}>
-                  <div className="flex items-start justify-between gap-1">
-                    <span className={`text-xs font-semibold truncate leading-tight ${colors.title}`}>
-                      {appt.patient.firstName} {appt.patient.firstLastName}
-                    </span>
-                    <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${STATUS_COLORS[appt.status]}`}>
-                      {STATUS_LABELS[appt.status]}
-                    </span>
-                  </div>
-                  {height > 36 && (
-                    <span className={`text-[11px] ${colors.sub}`}>
-                      {parseTime(appt.scheduledStart)} · {appt.serviceType.name}
-                    </span>
+                  {twoRows ? (
+                    <>
+                      {/* Row 1: name + badge */}
+                      <div className="flex items-start justify-between gap-1">
+                        <span className={`text-xs font-semibold truncate leading-tight ${colors.title}`}>
+                          {appt.patient.firstName} {appt.patient.firstLastName}
+                        </span>
+                        <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight ${STATUS_COLORS[appt.status]}`}>
+                          {STATUS_LABELS[appt.status]}
+                        </span>
+                      </div>
+                      {/* Row 2: time · service · doctor */}
+                      <span className={`block text-[11px] leading-tight mt-0.5 truncate ${colors.sub}`}>
+                        {parseTime(appt.scheduledStart)} – {parseTime(appt.scheduledEnd)}
+                        {' · '}{appt.serviceType.name}
+                        {' · '}{appt.professional.user.firstName} {appt.professional.user.lastName}
+                      </span>
+                    </>
+                  ) : (
+                    /* Compact single line for very short slots */
+                    <div className="flex h-full items-center justify-between gap-1">
+                      <span className={`text-[11px] font-semibold truncate leading-none ${colors.title}`}>
+                        {appt.patient.firstName} {appt.patient.firstLastName}
+                        <span className={`font-normal ${colors.sub}`}>
+                          {' · '}{parseTime(appt.scheduledStart)}–{parseTime(appt.scheduledEnd)}
+                          {' · '}{appt.serviceType.name}
+                        </span>
+                      </span>
+                      <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight ${STATUS_COLORS[appt.status]}`}>
+                        {STATUS_LABELS[appt.status]}
+                      </span>
+                    </div>
                   )}
                 </button>
               )
             })}
           </div>
-        </div>
+        </div>}
       </div>
 
-      {/* Desktop detail panel */}
-      {selectedAppt && (
-        <aside className="hidden w-72 shrink-0 border-l border-slate-200 lg:flex lg:flex-col">
-          <DetailPanel appt={selectedAppt} onClose={() => setSelectedApptId(null)}
-            onUpdated={() => qc.invalidateQueries({ queryKey: ['appointments'] })} />
-        </aside>
-      )}
+      {/* ── Desktop detail panel (always visible, 300px) ── */}
+      <aside className="hidden w-72 shrink-0 border-l border-slate-200 lg:flex lg:flex-col bg-white">
+        {selectedAppt ? (
+          <DetailPanel
+            appt={selectedAppt}
+            onClose={() => setSelectedApptId(null)}
+            onUpdated={() => qc.invalidateQueries({ queryKey: ['appointments'] })}
+          />
+        ) : (
+          <DetailPanelPlaceholder onNew={() => setShowNewModal(true)} />
+        )}
+      </aside>
 
-      {/* Mobile bottom drawer */}
+      {/* ── Mobile bottom drawer ── */}
       {selectedAppt && (
         <>
-          <div className={`fixed inset-0 z-40 bg-black/40 transition-opacity duration-200 lg:hidden ${detailOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-            onClick={() => setDetailOpen(false)} />
-          <div className={`fixed inset-x-0 bottom-0 z-50 max-h-[85vh] overflow-hidden rounded-t-2xl shadow-2xl transition-transform duration-300 ease-in-out lg:hidden ${detailOpen ? 'translate-y-0' : 'translate-y-full'}`}>
+          <div
+            className={`fixed inset-0 z-40 bg-black/40 transition-opacity duration-200 lg:hidden ${detailOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            onClick={() => setDetailOpen(false)}
+          />
+          <div
+            className={`fixed inset-x-0 bottom-0 z-50 max-h-[85vh] overflow-hidden rounded-t-2xl shadow-2xl transition-transform duration-300 ease-in-out lg:hidden ${detailOpen ? 'translate-y-0' : 'translate-y-full'}`}>
             <div className="flex justify-center bg-white pt-3 pb-1">
               <div className="h-1 w-10 rounded-full bg-slate-200" />
             </div>
-            <DetailPanel appt={selectedAppt} onClose={() => setDetailOpen(false)}
-              onUpdated={() => qc.invalidateQueries({ queryKey: ['appointments'] })} />
+            <DetailPanel
+              appt={selectedAppt}
+              onClose={() => { setDetailOpen(false); setSelectedApptId(null) }}
+              onUpdated={() => qc.invalidateQueries({ queryKey: ['appointments'] })}
+            />
           </div>
         </>
       )}
 
       {showNewModal && (
-        <NewAppointmentModal defaultDate={dateStr} onClose={() => setShowNewModal(false)}
-          onCreated={() => qc.invalidateQueries({ queryKey: ['appointments'] })} />
+        <NewAppointmentModal
+          defaultDate={dateStr}
+          onClose={() => setShowNewModal(false)}
+          onCreated={() => qc.invalidateQueries({ queryKey: ['appointments'] })}
+        />
       )}
     </div>
   )
